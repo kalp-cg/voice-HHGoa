@@ -106,7 +106,17 @@ docker run --rm -p 7860:7860 \
   voice-rag-goa
 ```
 
-Public GitHub + a hosted URL still require your GitHub login (`gh auth login`) and a host (HF Space / VPS). Videos and `#RAGInGoa` posts are still yours.
+### Deploy on Render
+
+1. https://dashboard.render.com → **New +** → **Web Service**
+2. Connect `kalp-cg/voice-HHGoa`, runtime **Docker**, branch `main`
+3. Add env var `ELEVENLABS_API_KEY` (secret)
+4. Create service and wait for first build
+5. Use the Render HTTPS URL as your submission live link
+
+Details: [docs/15-submission-kit.md](./docs/15-submission-kit.md)
+
+Videos and `#RAGInGoa` posts are still yours.
 
 ## Docs
 

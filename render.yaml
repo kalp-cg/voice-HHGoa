@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: voice-hhgoa
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /health
+    envVars:
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: QDRANT_PATH
+        value: qdrant_storage/deploy
+      - key: DEFAULT_ANSWER_MODE
+        value: fast
+      - key: DATASET_RECORDS
+        value: "500"
+      - key: DATASET_CHUNKS
+        value: "750"

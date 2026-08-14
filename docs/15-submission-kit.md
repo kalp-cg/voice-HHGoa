@@ -4,12 +4,34 @@
 
 - GitHub: https://github.com/kalp-cg/voice-HHGoa
 - Local demo: http://127.0.0.1:8000
-- Public demo: run `./scripts/public_demo.sh` and keep that terminal open.
+- Public demo (temporary tunnel): run `./scripts/public_demo.sh` and keep that terminal open.
+- Recommended permanent host: **Render** (see below)
 - Submission form: https://forms.gle/MNvCjcv23Hn2Eeu58
 
-The account-less Cloudflare URL changes when the tunnel restarts. Test it
-immediately before recording and submitting. A permanent hosted URL requires
-a paid host or a Hugging Face PRO account for Docker Spaces.
+### Deploy on Render (recommended permanent link)
+
+1. Open https://dashboard.render.com and sign up / log in (GitHub login is easiest).
+2. Click **New +** → **Web Service**.
+3. Connect the repo `kalp-cg/voice-HHGoa` (authorize GitHub if asked).
+4. Settings:
+   - **Name:** `voice-hhgoa`
+   - **Language / Runtime:** Docker
+   - **Branch:** `main`
+   - **Region:** Singapore (or closest to you)
+   - **Instance type:** Free
+5. **Environment** → Add:
+   - `ELEVENLABS_API_KEY` = your ElevenLabs key (from local `.env`)
+   - `QDRANT_PATH` = `qdrant_storage/deploy`
+   - `DEFAULT_ANSWER_MODE` = `fast`
+6. Click **Create Web Service**.
+7. Wait for the first build (pip install + first index build, often 5–15 minutes).
+8. Open the Render URL (`https://voice-hhgoa.onrender.com` or whatever Render assigns).
+9. Check `/health` then ask: “Where is Goa located?”
+
+Notes:
+- Free Render apps **sleep when idle**. Wake the site before recording videos or demos.
+- First request after sleep can be slow while the service boots and warms embeddings.
+- The free disk is ephemeral: redeploys rebuild the small capped sample index automatically.
 
 ## Video 1 — team/process (90 seconds)
 
