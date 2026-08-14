@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice RAG Goa</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <p class="brand">Voice RAG · Goa 2026</p>
+      <h1>Ask the knowledge base.</h1>
+      <p class="lede">
+        Speak or type. ElevenLabs transcribes, then hybrid retrieval (dense +
+        BM25 + RRF) and reranking answer straight from the indexed passages.
+        No LLM in this path — every answer is grounded in retrieved text.
+      </p>
+
+      <div class="controls">
+        <button type="button" id="btn-start" class="btn primary">Start mic</button>
+        <button type="button" id="btn-stop" class="btn" disabled>Stop</button>
+      </div>
+
+      <form id="text-form" class="text-row">
+        <input
+          id="text-query"
+          type="text"
+          placeholder="Or type a question…"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn primary">Ask</button>
+      </form>
+
+      <p id="status" class="status" aria-live="polite">Idle</p>
+
+      <section class="panel">
+        <h2>Live (partial)</h2>
+        <p id="partial" class="transcript partial">—</p>
+      </section>
+
+      <section class="panel">
+        <h2>Transcript</h2>
+        <p id="transcript" class="transcript">—</p>
+      </section>
+
+      <section class="panel">
+        <h2>Answer</h2>
+        <p id="answer" class="answer">Speak or type a question to begin.</p>
+        <p id="meta" class="meta-line"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Sources</h2>
+        <div id="sources" class="sources">
+          <p class="empty">No sources yet.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Latency (ms)</h2>
+        <table class="lat">
+          <thead>
+            <tr><th>Stage</th><th>ms</th></tr>
+          </thead>
+          <tbody id="latency"></tbody>
+        </table>
+      </section>
+    </main>
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,253 @@
+:root {
+  --bg0: #0c1210;
+  --bg1: #14201c;
+  --ink: #e8f2ec;
+  --muted: #8aa396;
+  --accent: #3dd68c;
+  --accent-dim: #1f7a4d;
+  --danger: #ff6b6b;
+  --line: rgba(232, 242, 236, 0.12);
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "DM Sans", "Segoe UI", sans-serif;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/fontsource/fonts/fraunces@latest/latin-600-normal.woff2")
+    format("woff2");
+}
+
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/fontsource/fonts/dm-sans@latest/latin-400-normal.woff2")
+    format("woff2");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--font-body);
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(61, 214, 140, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(40, 120, 90, 0.25), transparent),
+    linear-gradient(165deg, var(--bg0), var(--bg1) 45%, #0a0f0d);
+}
+
+.shell {
+  width: min(640px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 3.5rem 0 4rem;
+}
+
+.brand {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.lede {
+  margin: 0 0 2rem;
+  color: var(--muted);
+  line-height: 1.55;
+  max-width: 36rem;
+}
+
+.controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.85rem 1.35rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #062015;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: #54e09c;
+}
+
+.btn:hover:not(:disabled):not(.primary) {
+  border-color: var(--accent-dim);
+}
+
+.status {
+  margin: 0 0 1.75rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.status.live {
+  color: var(--accent);
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+.panel {
+  border-top: 1px solid var(--line);
+  padding: 1.25rem 0 1.5rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.transcript {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.5;
+  min-height: 1.5em;
+}
+
+.transcript.partial {
+  color: rgba(232, 242, 236, 0.65);
+  font-style: italic;
+}
+
+.transcript.committed p {
+  margin: 0 0 0.65rem;
+}
+
+.transcript .empty {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.log {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.log li {
+  margin-bottom: 0.25rem;
+}
+
+.text-row {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0 0 1.25rem;
+}
+
+.text-row input {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  font: inherit;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+}
+
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.mode select {
+  background: var(--bg1);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+}
+
+.answer {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.meta-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.sources .src {
+  margin-bottom: 0.9rem;
+}
+
+.sources header {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.sources p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.lat {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.lat th,
+.lat td {
+  text-align: left;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.lat td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
