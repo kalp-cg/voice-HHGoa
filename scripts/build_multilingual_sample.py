@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -33,6 +34,57 @@ LANGS = [
     "te",
     "ur",
 ]
+
+SCRIPT_RANGES: dict[str, tuple[int, int]] = {
+    "as": (0x0980, 0x09FF),
+    "bn": (0x0980, 0x09FF),
+    "gu": (0x0A80, 0x0AFF),
+    "hi": (0x0900, 0x097F),
+    "kn": (0x0C80, 0x0CFF),
+    "ml": (0x0D00, 0x0D7F),
+    "mr": (0x0900, 0x097F),
+    "ne": (0x0900, 0x097F),
+    "or": (0x0B00, 0x0B7F),
+    "pa": (0x0A00, 0x0A7F),
+    "sa": (0x0900, 0x097F),
+    "ta": (0x0B80, 0x0BFF),
+    "te": (0x0C00, 0x0C7F),
+    "ur": (0x0600, 0x077F),
+}
+WORD = re.compile(r"\w+", re.UNICODE)
+
+
+def _has_clean_native_script(
+    text: str,
+    language: str,
+    *,
+    minimum_chars: int,
+    minimum_ratio: float = 0.8,
+) -> bool:
+    """Reject benchmark rows translated into the wrong or mixed Indic script."""
+    expected = SCRIPT_RANGES[language]
+    expected_count = 0
+    indic_count = 0
+    for char in text:
+        code = ord(char)
+        if 0x0600 <= code <= 0x0D7F and char.isalpha():
+            indic_count += 1
+            if expected[0] <= code <= expected[1]:
+                expected_count += 1
+    return (
+        expected_count >= minimum_chars
+        and expected_count / max(indic_count, 1) >= minimum_ratio
+    )
+
+
+def _answer_supported_by_passage(answer: str, passage: str) -> bool:
+    """Reject benchmark pairs whose translated answer contradicts the passage."""
+    answer_tokens = {token.lower() for token in WORD.findall(answer) if len(token) >= 3}
+    passage_tokens = {
+        token.lower() for token in WORD.findall(passage) if len(token) >= 3
+    }
+    return not answer_tokens or bool(answer_tokens & passage_tokens)
+
 
 GOA: dict[str, dict[str, str]] = {
     "en": {
@@ -177,6 +229,18 @@ def corpus_records(parquet_root: Path, per_lang: int) -> list[dict]:
             passage = (raw.get("passage") or "").strip()
             answer = (raw.get("answer") or "").strip()
             if len(query) < 4 or len(passage) < 40:
+                continue
+            if not _has_clean_native_script(
+                query,
+                lang,
+                minimum_chars=2,
+            ) or not _has_clean_native_script(
+                passage,
+                lang,
+                minimum_chars=10,
+            ):
+                continue
+            if not _answer_supported_by_passage(answer, passage):
                 continue
             query_id += 1
             rows.append(

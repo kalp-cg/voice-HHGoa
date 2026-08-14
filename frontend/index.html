@@ -76,8 +76,9 @@
         <p class="hint">
           The mic stops after each question, so background sound cannot send a
           second one — press <strong>Ask another question</strong> to continue.
-          Language is detected from what you actually said; pick one only to
-          override detection in a noisy room.
+          Language is detected from what you actually said. If the wrong
+          language is transcribed, pick yours in <strong>Language</strong>
+          before pressing Start mic.
         </p>
       </section>
 
@@ -105,8 +106,13 @@
             <p id="transcript" class="transcript">—</p>
           </section>
 
-          <section class="card">
-            <h2>Latency (ms)</h2>
+          <section class="card latency-card">
+            <h2>Latency</h2>
+            <p id="latency-hero" class="latency-hero">
+              <span class="latency-value">—</span>
+              <span class="latency-unit">ms RAG</span>
+            </p>
+            <p class="latency-caption">Warm retrieval path · STT separate</p>
             <table class="lat">
               <thead>
                 <tr><th>Stage</th><th>ms</th></tr>

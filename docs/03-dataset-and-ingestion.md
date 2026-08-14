@@ -98,8 +98,10 @@ hf download ai4bharat/IndicMSMARCO --repo-type dataset \
   --local-dir /tmp/indic-msmarco-mini
 
 python scripts/build_multilingual_sample.py \
-  --parquet-root /tmp/indic-msmarco-mini --per-lang 15
+  --parquet-root /tmp/indic-msmarco-mini --per-lang 100
 ```
 
-Result: 210 records / ~296 KB source JSONL. The Docker build converts it to a
-300-chunk sparse index; no parquet or full dataset is committed.
+The builder rejects wrong-script translations and answer/passage pairs with no
+lexical support. Result: 1,315 records / ~2 MB source JSONL. The Docker build
+converts it to a 2,171-chunk sparse index; no parquet or full dataset is
+committed.

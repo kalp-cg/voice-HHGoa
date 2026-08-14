@@ -85,7 +85,10 @@ def main() -> None:
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    seen_texts: set[str] = set()
+    # Keep one copy of a passage per benchmark query. Different queries can
+    # legitimately share a passage; collapsing those copies loses the hidden
+    # source-query evidence used by retrieval and guardrails.
+    seen_chunks: set[tuple[str, str]] = set()
     record_batch: list[dict] = [] if args.no_bootstrap else _load_bootstrap(args.bootstrap)
     bootstrap_n = len(record_batch)
     records_seen = bootstrap_n
@@ -117,9 +120,10 @@ def main() -> None:
             if not text:
                 continue
             th = text_hash(text)
-            if th in seen_texts:
+            dedupe_key = (th, str(ch.query_id))
+            if dedupe_key in seen_chunks:
                 continue
-            seen_texts.add(th)
+            seen_chunks.add(dedupe_key)
             out_rows.append(
                 {
                     "chunk_id": str(ch.chunk_id or f"c{chunks_indexed}"),

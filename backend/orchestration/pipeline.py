@@ -7,11 +7,16 @@ import time
 from typing import Any, Literal
 
 from backend.core.config import Settings, get_settings
-from backend.core.languages import resolve_languages
+from backend.core.languages import (
+    looks_romanized_indic,
+    retrieval_languages,
+    resolve_languages,
+    train_language_classifier,
+)
 from backend.core.telemetry import StageTimer
 from backend.generation.extractive import extractive_answer
 from backend.generation.llm import OllamaError, generate_answer, ollama_has_model
-from backend.generation.prompts import REFUSAL
+from backend.generation.prompts import REFUSAL, ROMANIZED_REFUSAL
 from backend.guardrails.grounding import verify_grounding
 from backend.guardrails.relevance import should_refuse
 from backend.guardrails.safety import UNSAFE_MESSAGE, is_unsafe
@@ -32,6 +37,25 @@ def _passages(hits: list[dict[str, Any]]) -> list[str]:
         seen.add(text)
         out.append(text[:1200])
     return out
+
+
+_language_model_paths: set[str] = set()
+
+
+def _train_language_model(qdrant_path: str) -> None:
+    """Teach language detection this index's own text, once per index.
+
+    Detection has a working fallback, so a failure here must not stop a query.
+    """
+    if qdrant_path in _language_model_paths:
+        return
+    _language_model_paths.add(qdrant_path)
+    try:
+        from backend.retrieval.sparse import get_bm25_index
+
+        train_language_classifier(get_bm25_index(qdrant_path).language_samples())
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def run_pipeline(
@@ -55,7 +79,13 @@ def run_pipeline(
         retrieval_mode = "hybrid"
     # Nothing is selected by hand in the normal flow: the query's own script,
     # optionally narrowed by the language speech recognition reported, decides.
+    _train_language_model(settings.qdrant_path)
     languages = resolve_languages(query, forced=language, hint=language_hint)
+    search_languages = retrieval_languages(
+        query,
+        forced=language,
+        hint=language_hint,
+    )
 
     envelope: dict[str, Any] = {
         "request_id": request_id,
@@ -122,7 +152,7 @@ def run_pipeline(
                 query,
                 limit=settings.hybrid_candidates,
                 path=settings.qdrant_path,
-                languages=languages,
+                languages=search_languages,
             )
         except Exception as exc:  # noqa: BLE001
             sparse_hits = []
@@ -156,8 +186,12 @@ def run_pipeline(
         envelope["confidence"] = round(conf, 4)
         if refuse:
             envelope["refused"] = True
-            envelope["refusal_reason"] = "low_confidence"
-            envelope["answer"] = msg
+            if looks_romanized_indic(query):
+                envelope["refusal_reason"] = "romanized_input"
+                envelope["answer"] = ROMANIZED_REFUSAL
+            else:
+                envelope["refusal_reason"] = "low_confidence"
+                envelope["answer"] = msg
             envelope["sources"] = selected[:3]
             envelope["latency_ms"] = timer.as_dict()
             return envelope

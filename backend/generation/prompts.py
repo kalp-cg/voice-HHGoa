@@ -2,6 +2,14 @@ REFUSAL = (
     "I don't have enough information in the provided knowledge base to answer that."
 )
 
+# The passages are stored in native scripts, so a question written in Latin
+# letters cannot match them however good retrieval is.
+ROMANIZED_REFUSAL = (
+    "That looks like an Indian language written in English letters, which "
+    "cannot match the indexed passages. Choose your language next to the "
+    "microphone and ask again, or type the question in its own script."
+)
+
 SYSTEM_GROUNDED = """You are a retrieval-grounded question answering system.
 Answer ONLY using the supplied context passages.
 If the answer is not present in the context, reply exactly:

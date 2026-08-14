@@ -120,8 +120,8 @@ Live: https://voice-hhgoa.onrender.com
 
 Render Free gives 512 MB RAM, which is not enough to hold the FastEmbed ONNX
 model, so the deployed image runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
-guardrails over a balanced 300-chunk / 15-language index baked at build time
-(77 MB peak RSS in the local sparse API check). Dense
+guardrails over a balanced 2,171-chunk / 15-language index baked at build time
+(123 MB container memory in the local deployment check). Dense
 and hybrid endpoints return 501 there and answer normally on any host with
 ≥2 GB RAM. Local runs stay full hybrid.
 

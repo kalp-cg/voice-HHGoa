@@ -41,6 +41,16 @@ class BM25Index:
         self._tokens = [tokenize(d.search_text or d.text) for d in docs]
         self._bm25 = BM25Okapi(self._tokens) if docs else None
 
+    def language_samples(self) -> dict[str, list[str]]:
+        """Indexed text grouped by language, for training language detection."""
+        samples: dict[str, list[str]] = {}
+        for doc in self.docs:
+            code = (doc.language or "").strip().lower()
+            text = (doc.parent_text or doc.text or "").strip()
+            if code and text:
+                samples.setdefault(code, []).append(text)
+        return samples
+
     def search(
         self,
         query: str,

@@ -10,6 +10,7 @@ const answerEl = document.getElementById("answer");
 const metaEl = document.getElementById("meta");
 const sourcesEl = document.getElementById("sources");
 const latencyEl = document.getElementById("latency");
+const latencyHeroEl = document.getElementById("latency-hero");
 const textForm = document.getElementById("text-form");
 const textQuery = document.getElementById("text-query");
 const modeNote = document.getElementById("mode-note");
@@ -60,21 +61,33 @@ function setStatus(text, kind = "") {
 
 const MODE = "fast";
 
+// Terms the corpus is built around. Biasing recognition toward them stops
+// "Goa" being transcribed as a similar-sounding word.
+const KEYTERMS = ["Goa", "Konkan", "India", "MS MARCO"];
+
+// Languages the index can answer in, read from /health. Scribe otherwise
+// chooses between 90+ languages and confuses Indic ones that sound close
+// (spoken Gujarati transcribed as Devanagari Hindi).
+let indexLanguages = [];
+
 async function showRetrievalMode() {
-  if (!modeNote) return;
   try {
     const res = await fetch("/health");
     const health = await res.json();
+    if (Array.isArray(health.languages)) indexLanguages = health.languages;
+    if (!modeNote) return;
     const points = Number(health.index_points || 0).toLocaleString();
-    const langs = Array.isArray(health.languages) ? health.languages.join(", ") : "";
+    const langs = indexLanguages.join(", ");
     modeNote.textContent =
       health.retrieval_mode === "sparse"
         ? `BM25 + rerank · ${points} chunks${langs ? ` · ${langs}` : ""} · memory-capped host`
         : `Dense + BM25 + RRF + rerank · ${points} chunks`;
   } catch {
-    modeNote.textContent = "Retrieval mode unavailable.";
+    if (modeNote) modeNote.textContent = "Retrieval mode unavailable.";
   }
 }
+
+const healthReady = showRetrievalMode();
 
 function renderSources(sources) {
   if (!sources?.length) {
@@ -93,9 +106,18 @@ function renderSources(sources) {
 function renderLatency(lat) {
   latencyEl.innerHTML = "";
   const rows = Object.entries(lat || {});
+  const total = Number(lat?.total_rag);
+  if (Number.isFinite(total)) {
+    latencyHeroEl.innerHTML = `<span class="latency-value">${total.toFixed(0)}</span><span class="latency-unit">ms RAG</span>`;
+    latencyHeroEl.classList.toggle("fast", total < 200);
+  } else {
+    latencyHeroEl.innerHTML = `<span class="latency-value">—</span><span class="latency-unit">ms RAG</span>`;
+    latencyHeroEl.classList.remove("fast");
+  }
   if (!rows.length) return;
   for (const [k, v] of rows) {
     const tr = document.createElement("tr");
+    if (k === "total_rag") tr.className = "total";
     tr.innerHTML = `<td>${k}</td><td>${Number(v).toFixed(1)}</td>`;
     latencyEl.appendChild(tr);
   }
@@ -140,6 +162,8 @@ function resetForNextQuestion() {
   metaEl.innerHTML = "";
   sourcesEl.innerHTML = `<p class="empty">No sources yet.</p>`;
   latencyEl.innerHTML = "";
+  latencyHeroEl.innerHTML = `<span class="latency-value">—</span><span class="latency-unit">ms RAG</span>`;
+  latencyHeroEl.classList.remove("fast");
   btnAgain.hidden = true;
 }
 
@@ -221,11 +245,15 @@ async function ask(query) {
     }
     const data = await res.json();
     answerEl.textContent = data.answer || "—";
-    const lang = sttLanguage || detectedLanguage || data.query_language;
+    // Show the language retrieval actually used (script of the transcript),
+    // not Scribe's spoken-language guess. Short English questions often get
+    // mis-tagged as Hindi/Marathi while the answer stays correct.
+    const resolvedLang = String(data.query_language || "en").trim() || "en";
+    const displayLang = sttLanguage || resolvedLang;
     responseLanguage =
-      data.sources?.[0]?.language || String(data.query_language || "en").split(",")[0];
+      data.sources?.[0]?.language || resolvedLang.split(",")[0] || "en";
     const flags = [
-      lang ? `lang ${lang}${sttLanguage ? " (forced)" : " (auto)"}` : null,
+      `lang ${displayLang}${sttLanguage ? " (forced)" : " (auto)"}`,
       data.grounded ? "grounded" : "not grounded",
       data.refused ? `refused:${data.refusal_reason || "yes"}` : "answered",
       data.mode,
@@ -269,6 +297,9 @@ async function start() {
   btnStart.disabled = true;
   setStatus("Fetching single-use token…");
   try {
+    // The index languages narrow Scribe's detection, so they must be known
+    // before the session opens.
+    await healthReady;
     const token = await fetchScribeToken();
     const options = {
       token,
@@ -284,6 +315,7 @@ async function start() {
       noVerbatim: true,
       // Scribe only reports the language it detected when this is on.
       includeLanguageDetection: true,
+      keyterms: KEYTERMS,
       microphone: {
         echoCancellation: true,
         noiseSuppression: true,
@@ -293,7 +325,12 @@ async function start() {
     // Empty value means auto-detect; the dropdown is only an override for
     // noisy rooms where a short question gets misread.
     const language = languageSelect.value;
-    if (language) options.languageCode = language;
+    if (language) {
+      options.languageCode = language;
+    } else if (indexLanguages.length) {
+      // Narrow auto-detection to what the index can actually answer in.
+      options.secondaryLanguages = indexLanguages;
+    }
     sttLanguage = language || null;
     languageSelect.disabled = true;
     const currentConnection = Scribe.connect(options);
@@ -330,7 +367,14 @@ async function start() {
     currentConnection.on(RealtimeEvents.COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS, (data) => {
       if (connection !== currentConnection) return;
       const code = (data.language_code || data.languageCode || "").trim().toLowerCase();
-      if (code) detectedLanguage = code;
+      // Within one script (Hindi / Marathi / Nepali / Sanskrit) this guess is
+      // what picks the language, so an unsure one is worse than none.
+      const confidence = Number(
+        data.language_probability ?? data.languageProbability ?? 1,
+      );
+      if (code && (!Number.isFinite(confidence) || confidence >= 0.5)) {
+        detectedLanguage = code;
+      }
     });
 
     currentConnection.on(RealtimeEvents.ERROR, (error) => {
@@ -397,5 +441,3 @@ textQuery.addEventListener("input", () => {
   voiceBuffer = textQuery.value.trim();
   livePartial = "";
 });
-
-showRetrievalMode();

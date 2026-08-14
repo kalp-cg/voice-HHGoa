@@ -13,7 +13,8 @@ from backend.stt.elevenlabs_client import (
 )
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
-_TOKEN_LIMIT = 5
+# Demo / video takes restart the mic often; each Start click needs a fresh token.
+_TOKEN_LIMIT = 30
 _TOKEN_WINDOW_S = 60.0
 _requests: dict[str, deque[float]] = defaultdict(deque)
 _requests_lock = Lock()

@@ -25,6 +25,7 @@ Hackathon / assignment project: **voice input → STT → hybrid retrieval → g
 | [13-delivery-checklist.md](./13-delivery-checklist.md) | Final submission checklist |
 | [14-measured-latency.md](./14-measured-latency.md) | P50/P70/P100 from 190-query run |
 | [15-submission-kit.md](./15-submission-kit.md) | Video scripts, captions, public demo, final form checklist |
+| [16-demo-testing-and-video-guide.md](./16-demo-testing-and-video-guide.md) | Verified multilingual questions and recording checklist |
 
 ## Non-negotiables
 
