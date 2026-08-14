@@ -1,3 +1,14 @@
+---
+title: Voice RAG Goa
+emoji: 🎙️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+startup_duration_timeout: 30m
+short_description: Fast grounded voice RAG over MSMARCO-XI
+---
+
 # Voice RAG Goa
 
 Voice-first RAG: **microphone → ElevenLabs STT → hybrid retrieval → rerank → grounded answer**, with multi-strategy chunking, a structured harness, guardrails, and P50/P70/P100 latency analytics.
