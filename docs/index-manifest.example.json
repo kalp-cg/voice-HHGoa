@@ -1,0 +1,14 @@
+{
+  "dataset": "ai4bharat/MSMARCO-XI",
+  "language": "hi",
+  "split": "validation",
+  "record_cap": 10000,
+  "bootstrap_records": 5,
+  "source_records_seen": 10000,
+  "records_seen": 10005,
+  "chunk_cap": 12000,
+  "chunks_indexed": 11627,
+  "collection": "msmarco_xi_mini",
+  "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "note": "Example provenance for the capped demo index. Live manifests under data/manifests/ are gitignored."
+}
