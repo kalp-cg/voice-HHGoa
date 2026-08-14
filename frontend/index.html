@@ -20,17 +20,26 @@
       <div class="controls">
         <button type="button" id="btn-start" class="btn primary">Start mic</button>
         <button type="button" id="btn-stop" class="btn" disabled>Stop</button>
+        <label class="toggle">
+          <input type="checkbox" id="auto-send" checked />
+          Send automatically when I stop speaking
+        </label>
       </div>
 
       <form id="text-form" class="text-row">
         <input
           id="text-query"
           type="text"
-          placeholder="Or type a question…"
+          placeholder="Speak, or type a question…"
           autocomplete="off"
         />
         <button type="submit" class="btn primary">Ask</button>
+        <button type="button" id="btn-clear" class="btn">Clear</button>
       </form>
+      <p class="hint">
+        Speech lands in the box above so you can edit it before it is sent. With
+        auto-send off, press <strong>Ask</strong> to search.
+      </p>
 
       <p id="status" class="status" aria-live="polite">Idle</p>
 

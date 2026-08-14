@@ -12,9 +12,16 @@ const latencyEl = document.getElementById("latency");
 const textForm = document.getElementById("text-form");
 const textQuery = document.getElementById("text-query");
 const modeNote = document.getElementById("mode-note");
+const autoSendToggle = document.getElementById("auto-send");
+const btnClear = document.getElementById("btn-clear");
+
+const AUTO_SEND_DELAY_MS = 1500;
 
 let connection = null;
 let asking = false;
+let queuedQuery = null;
+let voiceBuffer = "";
+let autoSendTimer = null;
 
 function setStatus(text, kind = "") {
   statusEl.textContent = text;
@@ -70,9 +77,47 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;");
 }
 
+function cancelAutoSend() {
+  if (autoSendTimer !== null) {
+    clearTimeout(autoSendTimer);
+    autoSendTimer = null;
+  }
+}
+
+function stageQuestion(text) {
+  textQuery.value = text;
+  transcriptEl.textContent = text || "—";
+}
+
+function sendStagedQuestion() {
+  cancelAutoSend();
+  const q = textQuery.value.trim();
+  if (!q) return;
+  voiceBuffer = "";
+  textQuery.value = "";
+  ask(q);
+}
+
+function scheduleAutoSend() {
+  cancelAutoSend();
+  if (!autoSendToggle.checked) {
+    setStatus("Heard you — press Ask to search", "live");
+    return;
+  }
+  setStatus("Heard you — searching…", "live");
+  autoSendTimer = setTimeout(() => {
+    autoSendTimer = null;
+    sendStagedQuestion();
+  }, AUTO_SEND_DELAY_MS);
+}
+
 async function ask(query) {
   const q = (query || "").trim();
-  if (!q || asking) return;
+  if (!q) return;
+  if (asking) {
+    queuedQuery = q;
+    return;
+  }
   asking = true;
   transcriptEl.textContent = q;
   setStatus("Retrieving…", "live");
@@ -104,6 +149,11 @@ async function ask(query) {
     setStatus(err.message || String(err), "error");
   } finally {
     asking = false;
+    if (queuedQuery) {
+      const next = queuedQuery;
+      queuedQuery = null;
+      ask(next);
+    }
   }
 }
 
@@ -145,7 +195,12 @@ async function start() {
     connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (data) => {
       const text = (data.text || "").trim();
       partialEl.textContent = "—";
-      if (text) ask(text);
+      if (!text) return;
+      // Segments of one spoken question arrive separately; merge them so the
+      // whole sentence is retrieved once instead of per fragment.
+      voiceBuffer = `${voiceBuffer} ${text}`.trim();
+      stageQuestion(voiceBuffer);
+      scheduleAutoSend();
     });
 
     connection.on(RealtimeEvents.ERROR, (error) => {
@@ -170,16 +225,36 @@ function stop() {
     connection.close();
     connection = null;
   }
-  setStatus("Stopped");
   btnStart.disabled = false;
   btnStop.disabled = true;
+  if (textQuery.value.trim()) {
+    // Stopping the mic is an explicit "I'm done talking" signal.
+    sendStagedQuestion();
+    return;
+  }
+  setStatus("Stopped");
 }
 
 btnStart.addEventListener("click", start);
 btnStop.addEventListener("click", stop);
 textForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  ask(textQuery.value);
+  sendStagedQuestion();
+});
+
+btnClear.addEventListener("click", () => {
+  cancelAutoSend();
+  voiceBuffer = "";
+  textQuery.value = "";
+  partialEl.textContent = "—";
+  setStatus("Cleared");
+  textQuery.focus();
+});
+
+textQuery.addEventListener("input", () => {
+  // Typing or editing means the user wants to control the send themselves.
+  cancelAutoSend();
+  voiceBuffer = textQuery.value.trim();
 });
 
 showRetrievalMode();

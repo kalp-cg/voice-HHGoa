@@ -83,6 +83,20 @@ h1 {
   display: flex;
   gap: 0.75rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.toggle input {
+  accent-color: var(--accent);
 }
 
 .btn {
@@ -181,7 +195,15 @@ h1 {
 .text-row {
   display: flex;
   gap: 0.6rem;
+  margin: 0 0 0.6rem;
+  flex-wrap: wrap;
+}
+
+.hint {
   margin: 0 0 1.25rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  max-width: 36rem;
 }
 
 .text-row input {
