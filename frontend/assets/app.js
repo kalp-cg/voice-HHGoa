@@ -11,6 +11,7 @@ const sourcesEl = document.getElementById("sources");
 const latencyEl = document.getElementById("latency");
 const textForm = document.getElementById("text-form");
 const textQuery = document.getElementById("text-query");
+const modeNote = document.getElementById("mode-note");
 
 let connection = null;
 let asking = false;
@@ -21,6 +22,21 @@ function setStatus(text, kind = "") {
 }
 
 const MODE = "fast";
+
+async function showRetrievalMode() {
+  if (!modeNote) return;
+  try {
+    const res = await fetch("/health");
+    const health = await res.json();
+    const points = Number(health.index_points || 0).toLocaleString();
+    modeNote.textContent =
+      health.retrieval_mode === "sparse"
+        ? `Retrieval: BM25 + rerank over ${points} chunks (memory-capped host; dense + RRF run on the full deployment).`
+        : `Retrieval: dense + BM25 + RRF + rerank over ${points} chunks.`;
+  } catch {
+    modeNote.textContent = "Retrieval mode unavailable.";
+  }
+}
 
 function renderSources(sources) {
   if (!sources?.length) {
@@ -165,3 +181,5 @@ textForm.addEventListener("submit", (e) => {
   e.preventDefault();
   ask(textQuery.value);
 });
+
+showRetrievalMode();

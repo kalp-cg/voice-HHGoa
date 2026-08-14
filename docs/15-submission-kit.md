@@ -3,12 +3,33 @@
 ## Current links
 
 - GitHub: https://github.com/kalp-cg/voice-HHGoa
+- **Public demo (permanent): https://voice-hhgoa.onrender.com** ← use this on the form
 - Local demo: http://127.0.0.1:8000
-- Public demo (temporary tunnel): run `./scripts/public_demo.sh` and keep that terminal open.
-- Recommended permanent host: **Render** (see below)
+- Public demo (temporary fallback tunnel): run `./scripts/public_demo.sh` and keep that terminal open.
 - Submission form: https://forms.gle/MNvCjcv23Hn2Eeu58
 
-### Deploy on Render (recommended permanent link)
+Verified live on 2026-08-14:
+
+| Check | Result |
+|---|---|
+| `/health` | `status: ok`, `index_points: 150`, `retrieval_mode: sparse` |
+| English query | grounded answer, `total_rag` ≈ 21 ms |
+| Hindi query (`गोवा कहाँ है?`) | grounded Hindi answer |
+| Unsafe query | refused |
+| `/api/voice/scribe-token` | 200 with a single-use token (ElevenLabs key active) |
+
+### Render Free memory mode
+
+Render Free caps RAM at 512 MB, which the FastEmbed ONNX model alone exceeds.
+The deployed image therefore runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
+guardrails over a 150-chunk index baked at Docker build time (~50 MB resident).
+`/api/retrieve/dense` and `/api/retrieve/hybrid` return 501 on Free. Full hybrid
+retrieval runs locally and on any host with ≥2 GB RAM.
+
+When demoing, say retrieval is hybrid in the full system and BM25-only on the
+free host; do not present the free host's numbers as the hybrid benchmark.
+
+### Deploy on Render (how it was set up)
 
 1. Open https://dashboard.render.com and sign up / log in (GitHub login is easiest).
 2. Click **New +** → **Web Service**.
@@ -22,16 +43,19 @@
 5. **Environment** → Add:
    - `ELEVENLABS_API_KEY` = your ElevenLabs key (from local `.env`)
    - `QDRANT_PATH` = `qdrant_storage/deploy`
+   - `RETRIEVAL_MODE` = `sparse`
+   - `SKIP_STARTUP_WARMUP` = `1`
    - `DEFAULT_ANSWER_MODE` = `fast`
 6. Click **Create Web Service**.
-7. Wait for the first build (pip install + first index build, often 5–15 minutes).
+7. Wait for the first build (pip install + build-time index, roughly 3–8 minutes).
 8. Open the Render URL (`https://voice-hhgoa.onrender.com` or whatever Render assigns).
 9. Check `/health` then ask: “Where is Goa located?”
 
 Notes:
 - Free Render apps **sleep when idle**. Wake the site before recording videos or demos.
-- First request after sleep can be slow while the service boots and warms embeddings.
-- The free disk is ephemeral: redeploys rebuild the small capped sample index automatically.
+- First request after sleep can be slow while the container boots.
+- The free disk is ephemeral: the index lives in the image, so redeploys always have it.
+- Dropping `RETRIEVAL_MODE=sparse` on a 512 MB instance brings back the OOM.
 
 ## Video 1 — team/process (90 seconds)
 
@@ -47,7 +71,7 @@ capped to fit the target hardware, with measured scale-up checkpoints.
 
 ## Video 2 — product demo
 
-1. Open the HTTPS public URL.
+1. Open https://voice-hhgoa.onrender.com (load it once beforehand so it is awake).
 2. Show `/health` reporting the index ready.
 3. Ask by voice: “Where is Goa located?”
 4. Show transcript, grounded answer, source passages, and stage latency.
@@ -75,8 +99,8 @@ Every post must include `#RAGInGoa`.
 
 ## Final form checklist
 
-- [ ] Public GitHub link opens in an incognito window
-- [ ] Public demo URL opens over HTTPS and microphone permission works
+- [x] Public GitHub link opens in an incognito window
+- [x] Public demo URL opens over HTTPS (https://voice-hhgoa.onrender.com) and the STT token endpoint returns 200
 - [ ] Video 1 is approximately 90 seconds and shows process
 - [ ] Video 2 demonstrates voice → transcript → answer end to end
 - [ ] Every team member posted both videos on all three platforms

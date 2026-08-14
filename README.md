@@ -13,6 +13,8 @@ short_description: Fast grounded voice RAG over MSMARCO-XI
 
 Voice-first RAG: **microphone → ElevenLabs STT → hybrid retrieval → rerank → grounded answer**, with multi-strategy chunking, a structured harness, guardrails, and P50/P70/P100 latency analytics.
 
+**Live demo:** https://voice-hhgoa.onrender.com (free tier — first request after idle takes ~30 s to wake)
+
 **Hardware:** RTX 3050 6 GB + 16 GB RAM  
 **Deadline:** 22 Aug 2026, 11:59 PM · tag `#RAGInGoa`
 
@@ -108,11 +110,19 @@ docker run --rm -p 7860:7860 \
 
 ### Deploy on Render
 
+Live: https://voice-hhgoa.onrender.com
+
 1. https://dashboard.render.com → **New +** → **Web Service**
 2. Connect `kalp-cg/voice-HHGoa`, runtime **Docker**, branch `main`
 3. Add env var `ELEVENLABS_API_KEY` (secret)
 4. Create service and wait for first build
 5. Use the Render HTTPS URL as your submission live link
+
+Render Free gives 512 MB RAM, which is not enough to hold the FastEmbed ONNX
+model, so the deployed image runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
+guardrails over a 150-chunk index baked at build time (~50 MB resident). Dense
+and hybrid endpoints return 501 there and answer normally on any host with
+≥2 GB RAM. Local runs stay full hybrid.
 
 Details: [docs/15-submission-kit.md](./docs/15-submission-kit.md)
 
