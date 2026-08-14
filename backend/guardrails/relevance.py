@@ -7,9 +7,11 @@ from typing import Any
 
 from backend.core.translit import (
     any_fuzzy_match,
+    fold_roman,
     fuzzy_key,
     is_mixed_script,
     romanize_token,
+    scripts_in,
 )
 from backend.generation.prompts import REFUSAL
 
@@ -42,11 +44,23 @@ OFFTOPIC = [
 ]
 
 
+# The same question word written in another script is still a question word.
+# Speech recognition that picks the wrong script would otherwise turn `છે` into
+# `छे`, which counts as content and drags coverage below the refusal threshold.
+_ROMAN_STOP = frozenset(
+    fold_roman(romanize_token(word)) for word in STOP
+) - {""}
+
+
+def _is_stopword(token: str) -> bool:
+    return token in STOP or fold_roman(romanize_token(token)) in _ROMAN_STOP
+
+
 def _content_tokens(text: str) -> set[str]:
     return {
         t.lower()
         for t in _TOKEN.findall(text or "")
-        if t.lower() not in STOP and len(t) > 1
+        if len(t) > 1 and not _is_stopword(t.lower())
     }
 
 
@@ -76,11 +90,20 @@ def coverage(query: str, hits: list[dict[str, Any]], k: int = 5) -> float:
     if not q:
         return 0.0
     ctx: set[str] = set()
+    texts: list[str] = []
     for h in hits[:k]:
-        ctx |= _content_tokens(f"{h.get('text') or ''} {h.get('parent_text') or ''}")
+        text = f"{h.get('text') or ''} {h.get('parent_text') or ''}"
+        texts.append(text)
+        ctx |= _content_tokens(text)
     matched = len(q & ctx)
-    if matched < len(q) and is_mixed_script(query):
-        matched += _cross_script_hits(q - ctx, ctx)
+    if matched < len(q):
+        # A grounded answer written in another script overlaps the query by
+        # zero characters, which would otherwise be refused as off-topic.
+        cross_script = is_mixed_script(query) or not (
+            scripts_in(" ".join(texts)) <= scripts_in(query)
+        )
+        if cross_script:
+            matched += _cross_script_hits(q - ctx, ctx)
     return matched / len(q)
 
 

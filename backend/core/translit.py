@@ -134,6 +134,11 @@ def romanize_token(token: str) -> str:
     return romanize(token)
 
 
+def fold_roman(roman: str) -> str:
+    """Collapse voicing and aspiration, so `enge` and `enke` compare equal."""
+    return _fold(roman)
+
+
 def fuzzy_key(roman: str) -> str:
     """Original first letter, so voiced and unvoiced names stay in separate buckets."""
     return roman[0] if roman else ""

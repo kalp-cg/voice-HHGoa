@@ -55,6 +55,7 @@ class BM25Index:
         self._tokens = [tokenize(d.search_text or d.text) for d in docs]
         self._bm25 = BM25Okapi(self._tokens) if docs else None
         self._roman_vocab: dict[str, dict[str, set[str]]] | None = None
+        self._lang_scripts: dict[str, int | None] | None = None
 
     def _romanized_vocabulary(self) -> dict[str, dict[str, set[str]]]:
         """Indexed Indic tokens grouped by bucket key, then by Latin spelling."""
@@ -76,39 +77,84 @@ class BM25Index:
         self._romanized_vocabulary()
 
     def _cross_script_terms(self, tokens: list[str], query: str = "") -> list[str]:
-        """Indexed Indic spellings of the Latin words in a mixed-script query.
+        """Indexed spellings of this query's words in the corpus's other scripts.
 
-        `Goa કયાં છે?` otherwise retrieves on `કયાં`/`છે` alone, which every
-        Gujarati passage contains, so the one passage about `ગોવા` never wins.
+        Two cases need it. `Goa કયાં છે?` otherwise retrieves on `કયાં`/`છે`
+        alone, which every Gujarati passage contains, so the one passage about
+        `ગોવા` never wins. And when speech recognition writes a language in the
+        wrong script, the transcript shares no characters with the passages
+        that answer it, in any language.
         """
-        latin = [t for t in tokens if t.isascii() and t.isalpha() and len(t) >= 3]
-        if not latin:
+        words = [
+            t
+            for t in tokens
+            if len(t) >= 3 and (t.isascii() and t.isalpha() or not t.isascii())
+        ]
+        if not words:
             return []
         vocab = self._romanized_vocabulary()
-        query_scripts = scripts_in(query)
         scored: dict[str, tuple[float, float]] = {}
-        for word in latin:
+        for word in words:
+            roman_word = romanize_token(word)
+            if len(roman_word) < 3:
+                continue
+            word_script = script_base(word[0])
             seen: set[str] = set()
-            for key in fuzzy_keys(word):
+            for key in fuzzy_keys(roman_word):
                 for roman, natives in vocab.get(key, {}).items():
                     if roman in seen:
                         continue
                     seen.add(roman)
-                    closeness = fuzzy_score(word, roman)
+                    closeness = fuzzy_score(roman_word, roman)
                     if closeness <= 0.0:
                         continue
                     for native in natives:
-                        same_script = (
-                            1.0
-                            if native and script_base(native[0]) in query_scripts
-                            else 0.0
-                        )
+                        # Another spelling in the script this word is already
+                        # written in adds nothing: BM25 scored it directly.
+                        if word_script is not None and (
+                            script_base(native[0]) == word_script
+                        ):
+                            continue
                         scored[native] = max(
                             scored.get(native, (0.0, 0.0)),
-                            (closeness, same_script),
+                            (closeness, float(len(roman))),
                         )
         best = sorted(scored, key=lambda t: scored[t], reverse=True)
         return best[:_MAX_CROSS_SCRIPT_TERMS]
+
+    def _language_scripts(self) -> dict[str, int | None]:
+        """Script each indexed language is written in."""
+        if self._lang_scripts is None:
+            found: dict[str, int | None] = {}
+            for doc, tokens in zip(self.docs, self._tokens):
+                code = (doc.language or "").strip().lower()
+                if not code or found.get(code) is not None:
+                    continue
+                for token in tokens:
+                    base = script_base(token[0]) if token else None
+                    if base is not None:
+                        found[code] = base
+                        break
+                found.setdefault(code, None)
+            self._lang_scripts = found
+        return self._lang_scripts
+
+    def _spans_scripts(self, query: str, wanted: set[str]) -> bool:
+        """True when a requested language is written in a script the query is not.
+
+        Retrieval was asked for passages the query cannot lexically touch, which
+        happens when speech recognition writes a language in the wrong script.
+        """
+        if not wanted:
+            return False
+        query_scripts = scripts_in(query)
+        if not query_scripts:
+            return False
+        scripts = self._language_scripts()
+        return any(
+            (base := scripts.get(code)) is not None and base not in query_scripts
+            for code in wanted
+        )
 
     def language_samples(self) -> dict[str, list[str]]:
         """Indexed text grouped by language, for training language detection."""
@@ -132,13 +178,15 @@ class BM25Index:
         q = tokenize(query)
         if not q:
             return []
-        expanded = (
-            q + self._cross_script_terms(q, query) if is_mixed_script(query) else q
-        )
-        scores = self._bm25.get_scores(expanded)
         wanted = {l.strip().lower() for l in (languages or set()) if l and l.strip()}
         if language and language.strip():
             wanted = {language.strip().lower()}
+        expanded = (
+            q + self._cross_script_terms(q, query)
+            if is_mixed_script(query) or self._spans_scripts(query, wanted)
+            else q
+        )
+        scores = self._bm25.get_scores(expanded)
         allowed_ids = [
             i
             for i, d in enumerate(self.docs)

@@ -8,9 +8,11 @@ from typing import Any
 
 from backend.core.translit import (
     any_fuzzy_match,
+    fold_roman,
     fuzzy_key,
     is_mixed_script,
     romanize_token,
+    scripts_in,
 )
 from backend.retrieval.dedupe import dedupe_hits
 
@@ -38,8 +40,19 @@ _STOP = {
 }
 
 
+# A question word keeps its job when speech recognition writes it in the wrong
+# script, so stopwords are matched on sound rather than spelling.
+_ROMAN_STOP = frozenset(fold_roman(romanize_token(word)) for word in _STOP) - {""}
+
+
 def _tokens(text: str) -> set[str]:
-    return {t.lower() for t in _TOKEN.findall(text or "") if t.lower() not in _STOP and len(t) > 1}
+    return {
+        t.lower()
+        for t in _TOKEN.findall(text or "")
+        if len(t) > 1
+        and t.lower() not in _STOP
+        and fold_roman(romanize_token(t.lower())) not in _ROMAN_STOP
+    }
 
 
 def _lexical_score(query: str, text: str, cross_script: bool = False) -> float:
@@ -76,11 +89,16 @@ def rerank(
     unique = dedupe_hits(hits)
     if not unique:
         return []
-    cross_script = is_mixed_script(query)
+    query_scripts = scripts_in(query)
     ranked = []
     for hit in unique:
         row = dict(hit)
         text = f"{hit.get('text') or ''} {hit.get('parent_text') or ''}"
+        # A passage written in another script shares no characters with the
+        # query, so plain overlap would score it the same as an unrelated one.
+        cross_script = is_mixed_script(query) or not (
+            scripts_in(text) <= query_scripts
+        )
         lex = _lexical_score(query, text, cross_script=cross_script)
         orig = float(hit.get("orig_score") or 0.0)
         dense_bonus = 0.2 * orig if 0 < orig <= 1.5 else 0.0

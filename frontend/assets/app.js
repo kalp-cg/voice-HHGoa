@@ -103,6 +103,34 @@ async function showRetrievalMode() {
 
 const healthReady = showRetrievalMode();
 
+// Auto-detect judges language from audio alone and reliably confuses Indic
+// languages that sound close, so people who speak one of them have to pick it
+// by hand. Re-picking before every question is the kind of friction that makes
+// a demo look broken, so the choice survives a reload.
+const LANGUAGE_PREF_KEY = "voice-rag-goa:stt-language";
+
+function restoreLanguagePreference() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(LANGUAGE_PREF_KEY);
+  } catch {
+    return;
+  }
+  if (saved === null) return;
+  const exists = [...languageSelect.options].some((o) => o.value === saved);
+  if (exists) languageSelect.value = saved;
+}
+
+languageSelect.addEventListener("change", () => {
+  try {
+    localStorage.setItem(LANGUAGE_PREF_KEY, languageSelect.value);
+  } catch {
+    // A blocked storage API must not stop the mic from working.
+  }
+});
+
+restoreLanguagePreference();
+
 function renderSources(sources) {
   if (!sources?.length) {
     sourcesEl.innerHTML = `<p class="empty">No sources.</p>`;

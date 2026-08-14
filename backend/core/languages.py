@@ -113,6 +113,73 @@ def looks_romanized_indic(text: str) -> bool:
     return bool(words & _ROMANIZED_MARKERS)
 
 
+# Question words and copulas for languages that own their script outright.
+# `_MARKERS` only needs the shared-script languages; these exist to recognise a
+# language by *sound* after speech recognition has written it in some other
+# script, so they are compared in romanised form.
+_SPOKEN_MARKERS: dict[str, tuple[str, ...]] = {
+    "gu": ("ક્યાં", "છે", "શું", "કોણ", "કેમ", "કેટલું", "નથી", "અને"),
+    "hi": ("कहाँ", "कहां", "है", "हैं", "क्या", "कौन", "कैसे", "कितना", "नहीं"),
+    "mr": ("कुठे", "आहे", "आहेत", "काय", "कोण", "कसे", "नाही"),
+    "ne": ("छ", "छन्", "छैन", "कस्तो", "हुन्छ"),
+    "sa": ("अस्ति", "कुत्र", "किम्", "कथम्", "भवति"),
+    "bn": ("কোথায়", "আছে", "কী", "কে", "কেমন"),
+    "as": ("ক'ত", "আছে", "কি", "কোন"),
+    "pa": ("ਕਿੱਥੇ", "ਹੈ", "ਕੀ", "ਕੌਣ", "ਕਿਵੇਂ"),
+    "or": ("କେଉଁଠି", "ଅଛି", "କଣ", "କିଏ"),
+    "ta": ("எங்கே", "என்ன", "உள்ளது", "யார்", "எப்படி"),
+    "te": ("ఎక్కడ", "ఏమిటి", "ఉంది", "ఎవరు", "ఎలా"),
+    "kn": ("ಎಲ್ಲಿ", "ಇದೆ", "ಏನು", "ಯಾರು", "ಹೇಗೆ"),
+    "ml": ("എവിടെ", "എന്ത്", "ആണ്", "ആര്", "എങ്ങനെ"),
+    "ur": ("کہاں", "ہے", "کیا", "کون", "کیسے"),
+}
+
+
+def _romanized_marker_index() -> dict[str, frozenset[str]]:
+    from backend.core.translit import fold_roman, romanize_token
+
+    return {
+        code: frozenset(
+            fold_roman(romanize_token(word)) for word in words if word
+        )
+        for code, words in _SPOKEN_MARKERS.items()
+    }
+
+
+_SPOKEN_BY_SOUND = _romanized_marker_index()
+
+
+def spoken_language(text: str) -> str | None:
+    """Language whose question words `text` sounds like, whatever script it uses.
+
+    Speech recognition picks a language from audio before any text exists, and
+    Indic languages that sound alike are routinely confused — spoken Gujarati
+    is commonly written out in Devanagari as Hindi. The words themselves still
+    carry the answer, so romanising them recovers the language that was
+    actually spoken. Returns None unless one language wins outright.
+    """
+    from backend.core.translit import fold_roman, romanize_token
+
+    words = {
+        fold_roman(romanize_token(word)) for word in _WORD.findall(text or "")
+    }
+    words.discard("")
+    if not words:
+        return None
+    hits = {
+        code: len(words & markers)
+        for code, markers in _SPOKEN_BY_SOUND.items()
+        if words & markers
+    }
+    if not hits:
+        return None
+    best = max(hits.values())
+    winners = [code for code, count in hits.items() if count == best]
+    # `hai` belongs to Hindi, Punjabi and Urdu alike. An ambiguous vote is no
+    # evidence, so leave the decision to the script and to retrieval.
+    return winners[0] if len(winners) == 1 else None
+
+
 _WHITESPACE = re.compile(r"\s+")
 
 
@@ -382,6 +449,13 @@ def resolve_languages(
         return {forced_code}
 
     scripts = detect_languages(text)
+    # What the words say outranks the language speech recognition guessed from
+    # audio: Gujarati written out in Devanagari still reads as Gujarati, and an
+    # audio guess should never overrule the words themselves.
+    sounds_like = spoken_language(text)
+    if sounds_like:
+        return {sounds_like} if sounds_like in scripts else {sounds_like, *scripts}
+
     code = normalize_code(hint)
     if code:
         if scripts and code in scripts:
@@ -418,6 +492,17 @@ def retrieval_languages(
         if family and forced_code not in family:
             return {forced_code, *family}
         return {forced_code}
+
+    # Recognised as one language but worded like another: search both, because
+    # only the passages of the language actually spoken can answer. When the
+    # words agree with the script, they already settle it and an audio guess
+    # must not narrow retrieval away from them.
+    sounds_like = spoken_language(text)
+    if sounds_like:
+        if family and sounds_like not in family:
+            return {sounds_like, *family}
+        if family:
+            return family
 
     hint_code = normalize_code(hint)
     if hint_code:
