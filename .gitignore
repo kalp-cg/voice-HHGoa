@@ -30,6 +30,7 @@ data/manifests/
 *.safetensors
 *.jsonl
 !data/samples/bootstrap_msmarco.jsonl
+!data/samples/deploy_msmarco_100.jsonl
 !data/samples/deploy_msmarco_500.jsonl
 !evaluation/queries.jsonl
 !.gitkeep

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     reranker_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
 
+    # hybrid = dense+BM25 (local/full); sparse = BM25-only (Render Free)
+    retrieval_mode: str = "hybrid"
+
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:1.5b"
     ollama_timeout_s: float = 25.0

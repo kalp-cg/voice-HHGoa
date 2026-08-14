@@ -17,12 +17,15 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    try:
-        from backend.orchestration.pipeline import run_pipeline
+    import os
 
-        run_pipeline("What is the capital of India?", mode="fast")
-    except Exception:
-        pass
+    if os.getenv("SKIP_STARTUP_WARMUP", "").strip() not in {"1", "true", "yes"}:
+        try:
+            from backend.orchestration.pipeline import run_pipeline
+
+            run_pipeline("What is the capital of India?", mode="fast")
+        except Exception:
+            pass
     yield
 
 

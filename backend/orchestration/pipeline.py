@@ -14,7 +14,6 @@ from backend.generation.prompts import REFUSAL
 from backend.guardrails.grounding import verify_grounding
 from backend.guardrails.relevance import should_refuse
 from backend.guardrails.safety import UNSAFE_MESSAGE, is_unsafe
-from backend.retrieval.dense import dense_retrieve
 from backend.retrieval.hybrid import reciprocal_rank_fusion
 from backend.retrieval.reranker import rerank
 from backend.retrieval.sparse import sparse_search
@@ -48,6 +47,9 @@ def run_pipeline(
     timer = StageTimer()
     request_id = uuid.uuid4().hex[:12]
     query = (query or "").strip()
+    retrieval_mode = (settings.retrieval_mode or "hybrid").strip().lower()
+    if retrieval_mode not in ("hybrid", "sparse"):
+        retrieval_mode = "hybrid"
 
     envelope: dict[str, Any] = {
         "request_id": request_id,
@@ -57,6 +59,7 @@ def run_pipeline(
         "refused": False,
         "refusal_reason": None,
         "mode": mode,
+        "retrieval_mode": retrieval_mode,
         "sources": [],
         "retrieval": {"candidates": 0, "selected": 0},
         "confidence": 0.0,
@@ -79,22 +82,32 @@ def run_pipeline(
             envelope["latency_ms"] = timer.as_dict()
             return envelope
 
-    try:
-        t_dense0 = time.perf_counter()
-        dense_hits, embed_ms = dense_retrieve(
-            query,
-            top_k=settings.hybrid_candidates,
-            qdrant_path=settings.qdrant_path,
-            qdrant_url=settings.qdrant_url,
-        )
-        timer.add("embedding", embed_ms)
-        timer.add("dense", max(0.0, (time.perf_counter() - t_dense0) * 1000 - embed_ms))
-    except Exception as exc:  # noqa: BLE001
-        envelope["error"] = f"dense_failed:{exc}"
-        envelope["refused"] = True
-        envelope["answer"] = REFUSAL
-        envelope["latency_ms"] = timer.as_dict()
-        return envelope
+    dense_hits: list[dict[str, Any]] = []
+    if retrieval_mode == "hybrid":
+        try:
+            from backend.retrieval.dense import dense_retrieve
+
+            t_dense0 = time.perf_counter()
+            dense_hits, embed_ms = dense_retrieve(
+                query,
+                top_k=settings.hybrid_candidates,
+                qdrant_path=settings.qdrant_path,
+                qdrant_url=settings.qdrant_url,
+            )
+            timer.add("embedding", embed_ms)
+            timer.add(
+                "dense",
+                max(0.0, (time.perf_counter() - t_dense0) * 1000 - embed_ms),
+            )
+        except Exception as exc:  # noqa: BLE001
+            envelope["error"] = f"dense_failed:{exc}"
+            envelope["refused"] = True
+            envelope["answer"] = REFUSAL
+            envelope["latency_ms"] = timer.as_dict()
+            return envelope
+    else:
+        timer.add("embedding", 0.0)
+        timer.add("dense", 0.0)
 
     with timer.track("bm25"):
         try:
@@ -108,11 +121,14 @@ def run_pipeline(
             envelope["error"] = f"bm25_failed:{exc}"
 
     with timer.track("fusion"):
-        fused = reciprocal_rank_fusion(
-            [dense_hits, sparse_hits],
-            k=60,
-            limit=settings.hybrid_candidates,
-        )
+        if retrieval_mode == "sparse":
+            fused = sparse_hits[: settings.hybrid_candidates]
+        else:
+            fused = reciprocal_rank_fusion(
+                [dense_hits, sparse_hits],
+                k=60,
+                limit=settings.hybrid_candidates,
+            )
 
     with timer.track("rerank"):
         selected = rerank(

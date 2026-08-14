@@ -8,7 +8,6 @@ from fastapi import APIRouter, HTTPException
 
 from backend.core.config import get_settings
 from backend.orchestration.pipeline import run_pipeline
-from backend.retrieval.dense import dense_retrieve
 from backend.retrieval.hybrid import reciprocal_rank_fusion
 from backend.retrieval.reranker import rerank
 from backend.retrieval.sparse import sparse_search
@@ -43,9 +42,16 @@ def _to_hits(raw: list[dict]) -> list[RetrieveHit]:
 @router.post("/api/retrieve/dense", response_model=RetrieveResponse)
 async def retrieve_dense(body: RetrieveRequest) -> RetrieveResponse:
     settings = get_settings()
+    if (settings.retrieval_mode or "").strip().lower() == "sparse":
+        raise HTTPException(
+            status_code=501,
+            detail="Dense retrieval disabled in sparse deploy mode",
+        )
     query = body.query.strip()
     if not query:
         raise HTTPException(status_code=400, detail="query is required")
+
+    from backend.retrieval.dense import dense_retrieve
 
     t0 = time.perf_counter()
     try:
@@ -95,10 +101,17 @@ async def retrieve_sparse(body: RetrieveRequest) -> RetrieveResponse:
 @router.post("/api/retrieve/hybrid", response_model=RetrieveResponse)
 async def retrieve_hybrid(body: RetrieveRequest) -> RetrieveResponse:
     settings = get_settings()
+    if (settings.retrieval_mode or "").strip().lower() == "sparse":
+        raise HTTPException(
+            status_code=501,
+            detail="Hybrid retrieval disabled in sparse deploy mode; use /api/retrieve/sparse",
+        )
     query = body.query.strip()
     if not query:
         raise HTTPException(status_code=400, detail="query is required")
     candidate_k = max(body.top_k * 2, 20)
+
+    from backend.retrieval.dense import dense_retrieve
 
     t0 = time.perf_counter()
     dense_hits, t_embed = dense_retrieve(

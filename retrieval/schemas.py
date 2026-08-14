@@ -40,6 +40,8 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     request_id: str
     query: str
     answer: str
@@ -47,6 +49,7 @@ class QueryResponse(BaseModel):
     refused: bool
     refusal_reason: str | None = None
     mode: str
+    retrieval_mode: str | None = None
     sources: list[RetrieveHit]
     retrieval: dict[str, int]
     confidence: float

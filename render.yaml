@@ -12,7 +12,15 @@ services:
         value: qdrant_storage/deploy
       - key: DEFAULT_ANSWER_MODE
         value: fast
+      - key: RETRIEVAL_MODE
+        value: sparse
+      - key: SKIP_STARTUP_WARMUP
+        value: "1"
       - key: DATASET_RECORDS
-        value: "500"
+        value: "100"
       - key: DATASET_CHUNKS
-        value: "750"
+        value: "150"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2"

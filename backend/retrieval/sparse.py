@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from rank_bm25 import BM25Okapi
-
-from retrieval.qdrant import COLLECTION, get_client
 
 _TOKEN = re.compile(r"[\w\u0900-\u097F]+", re.UNICODE)
 
@@ -69,16 +69,46 @@ class BM25Index:
         return out
 
 
+def _row_to_doc(payload: dict[str, Any], fallback_id: str) -> SparseDoc | None:
+    text = payload.get("text") or ""
+    if not str(text).strip():
+        return None
+    return SparseDoc(
+        chunk_id=str(payload.get("chunk_id") or fallback_id),
+        text=str(text),
+        parent_text=str(payload.get("parent_text") or ""),
+        chunk_type=str(payload.get("chunk_type") or ""),
+        language=str(payload.get("language") or ""),
+        passage_lang=str(payload.get("passage_lang") or ""),
+        query_id=payload.get("query_id"),
+    )
+
+
+def _load_docs_from_jsonl(path: Path) -> list[SparseDoc]:
+    docs: list[SparseDoc] = []
+    with path.open(encoding="utf-8") as fh:
+        for i, line in enumerate(fh):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            doc = _row_to_doc(row, fallback_id=f"jsonl:{i}")
+            if doc:
+                docs.append(doc)
+    return docs
+
+
 def _load_docs_from_qdrant(
     path: str = "qdrant_storage/local",
-    collection: str = COLLECTION,
+    collection: str = "msmarco_xi_mini",
 ) -> list[SparseDoc]:
+    from retrieval.qdrant import COLLECTION, get_client
+
     client = get_client(url="", path=path)
     docs: list[SparseDoc] = []
     offset = None
     while True:
         points, offset = client.scroll(
-            collection_name=collection,
+            collection_name=collection or COLLECTION,
             limit=256,
             offset=offset,
             with_payload=True,
@@ -86,28 +116,25 @@ def _load_docs_from_qdrant(
         )
         for p in points:
             payload = p.payload or {}
-            text = payload.get("text") or ""
-            if not text.strip():
-                continue
-            docs.append(
-                SparseDoc(
-                    chunk_id=str(payload.get("chunk_id") or p.id),
-                    text=text,
-                    parent_text=str(payload.get("parent_text") or ""),
-                    chunk_type=str(payload.get("chunk_type") or ""),
-                    language=str(payload.get("language") or ""),
-                    passage_lang=str(payload.get("passage_lang") or ""),
-                    query_id=payload.get("query_id"),
-                )
-            )
+            doc = _row_to_doc(payload, fallback_id=str(p.id))
+            if doc:
+                docs.append(doc)
         if offset is None:
             break
     return docs
 
 
+def _resolve_docs(path: str = "qdrant_storage/local") -> list[SparseDoc]:
+    base = Path(path)
+    jsonl = base / "chunks.jsonl"
+    if jsonl.is_file():
+        return _load_docs_from_jsonl(jsonl)
+    return _load_docs_from_qdrant(path=path)
+
+
 @lru_cache(maxsize=1)
 def get_bm25_index(path: str = "qdrant_storage/local") -> BM25Index:
-    docs = _load_docs_from_qdrant(path=path)
+    docs = _resolve_docs(path)
     return BM25Index(docs)
 
 

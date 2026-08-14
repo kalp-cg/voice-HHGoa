@@ -11,8 +11,6 @@ import json
 from pathlib import Path
 from typing import Any, Iterator
 
-from datasets import load_dataset
-
 DATASET_ID = "ai4bharat/MSMARCO-XI"
 
 # Map short language codes → parquet filenames on the Hub
@@ -70,6 +68,8 @@ def iter_examples(
     split: str = "train",
     limit: int = 10_000,
 ) -> Iterator[dict[str, Any]]:
+    from datasets import load_dataset
+
     url = parquet_url(language, split)
     ds = load_dataset("parquet", data_files={"data": url}, split="data", streaming=True)
     for i, row in enumerate(ds):

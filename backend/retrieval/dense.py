@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ingestion.embed import embed_query
-from retrieval.qdrant import dense_search, get_client
-
 
 def dense_retrieve(
     query: str,
@@ -17,6 +14,9 @@ def dense_retrieve(
 ) -> tuple[list[dict[str, Any]], float]:
     """Returns (hits, embed_ms)."""
     import time
+
+    from ingestion.embed import embed_query
+    from retrieval.qdrant import dense_search, get_client
 
     t0 = time.perf_counter()
     vector = embed_query(query)
