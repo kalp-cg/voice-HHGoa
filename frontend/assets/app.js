@@ -29,9 +29,9 @@ const languageSelect = document.getElementById("stt-language");
 const btnAgain = document.getElementById("btn-again");
 const micLabel = document.getElementById("mic-label");
 
-// Scribe's VAD first waits 0.5s for silence; the post-commit pause must be long
-// enough for the COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS event (which carries the
-// detected language code) to arrive before the question is auto-sent.
+// Scribe's VAD waits for silence first; this further pause lets the
+// COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS event (which carries the detected
+// language code) arrive before the question is auto-sent.
 // 650ms gives Scribe enough headroom even on slower connections.
 const AUTO_SEND_AFTER_COMMIT_MS = 650;
 const ASK_AGAIN_LABELS = {
@@ -344,10 +344,13 @@ async function start() {
       // Commit on detected silence, otherwise the server decides when to
       // finalize and a finished question can sit unsent for seconds.
       commitStrategy: "vad",
-      vadSilenceThresholdSecs: 0.5,
+      // Long enough to sit through the pause people take mid-question,
+      // especially when reading an unfamiliar script aloud. At 0.5s the
+      // question was committed half-spoken and retrieval saw a fragment.
+      vadSilenceThresholdSecs: 1.6,
       vadThreshold: 0.5,
       minSpeechDurationMs: 500,
-      minSilenceDurationMs: 500,
+      minSilenceDurationMs: 1600,
       includeTimestamps: true,
       noVerbatim: true,
       // Scribe only reports the language it detected when this is on.
