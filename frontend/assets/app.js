@@ -1,6 +1,15 @@
 // 1.17.0 is the first version that can request language detection from Scribe.
 import { Scribe, RealtimeEvents } from "https://esm.sh/@elevenlabs/client@1.17.0";
 
+// All languages the index can plausibly answer in. Used to narrow Scribe's
+// auto-detection from 90+ languages down to this focused set, which
+// dramatically reduces confusion between similar-sounding Indic languages
+// (e.g. Gujarati heard as Hindi).
+const SUPPORTED_LANGUAGES = [
+  "en", "hi", "bn", "mr", "ta", "te", "gu", "kn", "ml",
+  "pa", "as", "or", "ne", "ur", "sa",
+];
+
 const btnStart = document.getElementById("btn-start");
 const btnStop = document.getElementById("btn-stop");
 const statusEl = document.getElementById("status");
@@ -20,9 +29,11 @@ const languageSelect = document.getElementById("stt-language");
 const btnAgain = document.getElementById("btn-again");
 const micLabel = document.getElementById("mic-label");
 
-// Scribe's VAD first waits 0.5s for silence; this short post-commit pause lets
-// the language event arrive before the question is sent (~0.85s total).
-const AUTO_SEND_AFTER_COMMIT_MS = 350;
+// Scribe's VAD first waits 0.5s for silence; the post-commit pause must be long
+// enough for the COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS event (which carries the
+// detected language code) to arrive before the question is auto-sent.
+// 650ms gives Scribe enough headroom even on slower connections.
+const AUTO_SEND_AFTER_COMMIT_MS = 650;
 const ASK_AGAIN_LABELS = {
   as: "আকৌ সোধক",
   bn: "আবার জিজ্ঞাসা করুন",
@@ -30,6 +41,7 @@ const ASK_AGAIN_LABELS = {
   gu: "ફરીથી પૂછો",
   hi: "फिर से पूछें",
   kn: "ಮತ್ತೆ ಕೇಳಿ",
+  kok: "परत विचारात",
   ml: "വീണ്ടും ചോദിക്കുക",
   mr: "पुन्हा विचारा",
   ne: "फेरि सोध्नुहोस्",
@@ -52,6 +64,8 @@ const silentClosures = new WeakSet();
 let sttLanguage = null;
 // Language Scribe reported for the last committed segment.
 let detectedLanguage = null;
+// Confidence Scribe reported for the detected language.
+let detectedConfidence = 0;
 let responseLanguage = "en";
 
 function setStatus(text, kind = "") {
@@ -101,6 +115,28 @@ function renderSources(sources) {
       return `<article class="src"><header>[${i + 1}] ${s.chunk_type || "chunk"} · ${score}</header><p>${escapeHtml(text)}</p></article>`;
     })
     .join("");
+}
+
+/**
+ * Show the language Scribe detected next to the Live transcript so the user
+ * can immediately see if the wrong language was picked and override it.
+ */
+function showDetectedLanguage() {
+  let langInfoEl = document.getElementById("detected-lang-info");
+  if (!langInfoEl) {
+    langInfoEl = document.createElement("p");
+    langInfoEl.id = "detected-lang-info";
+    langInfoEl.className = "status";
+    langInfoEl.style.cssText = "font-size:0.78rem;margin:0.3rem 0 0;";
+    partialEl.parentElement.insertBefore(langInfoEl, partialEl);
+  }
+  if (detectedLanguage) {
+    const confPct = Math.round(detectedConfidence * 100);
+    langInfoEl.innerHTML =
+      `<span style="color:var(--accent)">🌐 Detected: <strong>${detectedLanguage}</strong> (${confPct}%)</span>`;
+  } else {
+    langInfoEl.textContent = "🌐 Language: waiting…";
+  }
 }
 
 function renderLatency(lat) {
@@ -154,6 +190,7 @@ function resetForNextQuestion() {
   voiceBuffer = "";
   livePartial = "";
   detectedLanguage = null;
+  detectedConfidence = 0;
   responseLanguage = "en";
   textQuery.value = "";
   partialEl.textContent = "—";
@@ -327,9 +364,13 @@ async function start() {
     const language = languageSelect.value;
     if (language) {
       options.languageCode = language;
-    } else if (indexLanguages.length) {
-      // Narrow auto-detection to what the index can actually answer in.
-      options.secondaryLanguages = indexLanguages;
+    } else {
+      // Narrow auto-detection to the languages the index can actually
+      // answer in. This is the single most impactful fix for Gujarati
+      // being misdetected: searching 15 languages instead of 90+
+      // eliminates most confusion between similar-sounding Indic ones.
+      options.secondaryLanguages =
+        indexLanguages.length > 0 ? indexLanguages : SUPPORTED_LANGUAGES;
     }
     sttLanguage = language || null;
     languageSelect.disabled = true;
@@ -357,6 +398,18 @@ async function start() {
       partialEl.textContent = "—";
       livePartial = "";
       if (!text) return;
+      // Some ElevenLabs client versions include language info here too.
+      // Capture it as a fallback in case WITH_TIMESTAMPS arrives late.
+      const earlyLang = (
+        data.language_code || data.languageCode || ""
+      ).trim().toLowerCase();
+      if (earlyLang && !detectedLanguage) {
+        detectedLanguage = earlyLang;
+        detectedConfidence = Number(
+          data.language_probability ?? data.languageProbability ?? 0.5,
+        );
+        showDetectedLanguage();
+      }
       // Segments of one spoken question arrive separately; merge them so the
       // whole sentence is retrieved once instead of per fragment.
       voiceBuffer = `${voiceBuffer} ${text}`.trim();
@@ -367,13 +420,17 @@ async function start() {
     currentConnection.on(RealtimeEvents.COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS, (data) => {
       if (connection !== currentConnection) return;
       const code = (data.language_code || data.languageCode || "").trim().toLowerCase();
-      // Within one script (Hindi / Marathi / Nepali / Sanskrit) this guess is
-      // what picks the language, so an unsure one is worse than none.
+      // With secondaryLanguages narrowed to ~15 languages, even a lower-
+      // confidence detection is far more reliable than searching 90+.
+      // Threshold lowered from 0.5 → 0.25 to stop dropping valid Gujarati
+      // detections that Scribe reports at 0.3–0.4 confidence.
       const confidence = Number(
         data.language_probability ?? data.languageProbability ?? 1,
       );
-      if (code && (!Number.isFinite(confidence) || confidence >= 0.5)) {
+      if (code && (!Number.isFinite(confidence) || confidence >= 0.25)) {
         detectedLanguage = code;
+        detectedConfidence = confidence;
+        showDetectedLanguage();
       }
     });
 

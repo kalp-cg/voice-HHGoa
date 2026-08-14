@@ -68,6 +68,8 @@ _ISO3_TO_ISO1 = {
     "guj": "gu",
     "hin": "hi",
     "kan": "kn",
+    "kok": "kok",
+    "gom": "kok",
     "mal": "ml",
     "mar": "mr",
     "nep": "ne",
@@ -362,6 +364,12 @@ def resolve_languages(
     A forced choice wins. Otherwise the script of the text decides, and a hint
     from speech recognition only narrows it further when the two agree — a
     misdetected language cannot pull retrieval away from what was written.
+
+    When the hint *disagrees* with the script (e.g. Scribe heard Gujarati but
+    transcribed in Devanagari), the hint is still included so that retrieval
+    can search both the heard language and the written-script languages.
+    Excluding the hint entirely caused zero-result failures for Gujarati,
+    Assamese, and other languages that Scribe occasionally mis-scripts.
     """
     forced_code = normalize_code(forced)
     if forced_code:
@@ -375,7 +383,15 @@ def resolve_languages(
 
     scripts = detect_languages(text)
     code = normalize_code(hint)
-    if code and scripts and code in scripts:
+    if code:
+        if scripts and code in scripts:
+            # Hint agrees with script — narrow to just the hinted language.
+            return {code}
+        # Hint disagrees with script — Scribe may have heard the right
+        # language but transcribed in the wrong script. Include both so
+        # retrieval has a chance to find passages in either.
+        if scripts:
+            return {code, *scripts}
         return {code}
     return scripts
 
@@ -391,6 +407,10 @@ def retrieval_languages(
     A classifier can confidently label a mixed Hindi/Nepali sentence as the
     wrong one. For retrieval, keep every language sharing the written script
     unless the user forced one or Scribe supplied a compatible language hint.
+
+    When the hint disagrees with the script family, include both: the heard
+    language and every language of the written script. This prevents Gujarati
+    speech transcribed in Devanagari from losing access to Gujarati passages.
     """
     family = script_languages(text)
     forced_code = normalize_code(forced)
@@ -400,6 +420,11 @@ def retrieval_languages(
         return {forced_code}
 
     hint_code = normalize_code(hint)
-    if hint_code and family and hint_code in family:
+    if hint_code:
+        if family and hint_code in family:
+            return {hint_code}
+        # Hint disagrees with the written script — include both.
+        if family:
+            return {hint_code, *family}
         return {hint_code}
     return family

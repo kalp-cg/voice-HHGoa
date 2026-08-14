@@ -103,8 +103,11 @@ def test_stt_hint_in_iso_639_3_still_narrows_a_shared_script():
     assert resolve_languages("गोवा", hint="mar") == {"mr"}
 
 
-def test_stt_hint_is_ignored_when_it_contradicts_the_script():
-    assert resolve_languages("Where is Goa located?", hint="ta") == {"en"}
+def test_stt_hint_includes_both_when_it_contradicts_the_script():
+    # When the hint disagrees with the transcript script, both are kept so
+    # retrieval can find passages in either. This is the fix for Gujarati
+    # speech being transcribed in Devanagari.
+    assert resolve_languages("Where is Goa located?", hint="ta") == {"en", "ta"}
 
 
 def test_stt_hint_narrows_within_a_shared_script():
