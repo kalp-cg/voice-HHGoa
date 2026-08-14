@@ -73,11 +73,12 @@ capped to fit the target hardware, with measured scale-up checkpoints.
 
 1. Open https://voice-hhgoa.onrender.com (load it once beforehand so it is awake).
 2. Show `/health` reporting the index ready.
-3. Ask by voice: “Where is Goa located?”
-4. Show transcript, grounded answer, source passages, and stage latency.
-5. Ask: “What is the weather in Goa today?” and show refusal.
-6. Ask an unsafe query and show the safety refusal.
-7. Finish on the latency panel and GitHub URL.
+3. Ask by voice: “Where is Goa located?” (set **Speaking** to English).
+4. Optional: switch **Speaking** to Hindi / Tamil / etc., play a matching YouTube clip on the laptop speaker, and show the same Goa fact answered in that language. The live index has one Goa passage per listed language (~72 KB sample), not the 55.6 GB dump.
+5. Show transcript, grounded answer, source passages, and stage latency.
+6. Ask: “What is the weather in Goa today?” and show refusal.
+7. Ask an unsafe query and show the safety refusal.
+8. Finish on the latency panel and GitHub URL.
 
 ## Required posting caption
 

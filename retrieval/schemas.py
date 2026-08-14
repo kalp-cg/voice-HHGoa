@@ -37,6 +37,7 @@ class RetrieveResponse(BaseModel):
 class QueryRequest(BaseModel):
     query: str
     mode: Literal["fast", "generative"] | None = None
+    language: str | None = None
 
 
 class QueryResponse(BaseModel):

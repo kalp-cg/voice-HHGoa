@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-_TOKEN = re.compile(r"[\w\u0900-\u097F]+", re.UNICODE)
+_TOKEN = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF]+", re.UNICODE)
 
 
 def tokenize(text: str) -> list[str]:
@@ -36,21 +36,37 @@ class BM25Index:
         self._tokens = [tokenize(d.text) for d in docs]
         self._bm25 = BM25Okapi(self._tokens) if docs else None
 
-    def search(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+    def search(
+        self,
+        query: str,
+        limit: int = 20,
+        language: str | None = None,
+    ) -> list[dict[str, Any]]:
         if not self._bm25 or not self.docs:
             return []
         q = tokenize(query)
         if not q:
             return []
         scores = self._bm25.get_scores(q)
-        candidate_count = min(limit, len(scores))
-        if candidate_count == len(scores):
-            ranked = np.argsort(scores)[::-1]
+        lang = (language or "").strip().lower()
+        allowed_ids = [
+            i
+            for i, d in enumerate(self.docs)
+            if not lang or (d.language or "").strip().lower() == lang
+        ]
+        if not allowed_ids:
+            return []
+        allowed = np.array(allowed_ids, dtype=int)
+        sub = scores[allowed]
+        candidate_count = min(limit, sub.size)
+        if candidate_count == sub.size:
+            order = np.argsort(sub)[::-1]
         else:
-            candidate_ids = np.argpartition(scores, -candidate_count)[-candidate_count:]
-            ranked = candidate_ids[np.argsort(scores[candidate_ids])[::-1]]
+            top = np.argpartition(sub, -candidate_count)[-candidate_count:]
+            order = top[np.argsort(sub[top])[::-1]]
         out: list[dict[str, Any]] = []
-        for i in ranked:
+        for pos in order:
+            i = int(allowed[int(pos)])
             if scores[i] <= 0:
                 continue
             d = self.docs[i]
@@ -142,5 +158,6 @@ def sparse_search(
     query: str,
     limit: int = 20,
     path: str = "qdrant_storage/local",
+    language: str | None = None,
 ) -> list[dict[str, Any]]:
-    return get_bm25_index(path).search(query, limit=limit)
+    return get_bm25_index(path).search(query, limit=limit, language=language)

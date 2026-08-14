@@ -32,6 +32,7 @@ data/manifests/
 !data/samples/bootstrap_msmarco.jsonl
 !data/samples/deploy_msmarco_100.jsonl
 !data/samples/deploy_msmarco_500.jsonl
+!data/samples/deploy_msmarco_multilingual.jsonl
 !evaluation/queries.jsonl
 !.gitkeep
 !data/samples/.gitkeep

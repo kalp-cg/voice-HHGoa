@@ -27,10 +27,11 @@ COPY data/samples data/samples
 
 # Prebuild a tiny BM25 chunk store at image build time (no ONNX model).
 RUN python scripts/build_sparse_deploy_index.py \
-      --input-jsonl data/samples/deploy_msmarco_100.jsonl \
-      --records 100 \
-      --max-chunks 150 \
-      --record-batch 32 \
+      --input-jsonl data/samples/deploy_msmarco_multilingual.jsonl \
+      --no-bootstrap \
+      --records 80 \
+      --max-chunks 250 \
+      --record-batch 16 \
       --output qdrant_storage/deploy/chunks.jsonl \
     && chmod +x scripts/deploy_start.sh
 

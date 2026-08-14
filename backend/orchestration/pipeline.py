@@ -38,6 +38,7 @@ def run_pipeline(
     *,
     mode: AnswerMode | None = None,
     settings: Settings | None = None,
+    language: str | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
     mode = mode or settings.default_answer_mode  # type: ignore[assignment]
@@ -115,6 +116,7 @@ def run_pipeline(
                 query,
                 limit=settings.hybrid_candidates,
                 path=settings.qdrant_path,
+                language=language,
             )
         except Exception as exc:  # noqa: BLE001
             sparse_hits = []

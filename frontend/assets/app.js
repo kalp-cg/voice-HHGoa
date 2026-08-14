@@ -38,9 +38,11 @@ async function showRetrievalMode() {
     const res = await fetch("/health");
     const health = await res.json();
     const points = Number(health.index_points || 0).toLocaleString();
+    const langs = Array.isArray(health.languages) ? health.languages.join(", ") : "";
     modeNote.textContent =
       health.retrieval_mode === "sparse"
-        ? `Retrieval: BM25 + rerank over ${points} chunks (memory-capped host; dense + RRF run on the full deployment).`
+        ? `Retrieval: BM25 + rerank over ${points} chunks` +
+          (langs ? ` in ${langs} (memory-capped host; dense + RRF run on the full deployment).` : " (memory-capped host).")
         : `Retrieval: dense + BM25 + RRF + rerank over ${points} chunks.`;
   } catch {
     modeNote.textContent = "Retrieval mode unavailable.";
@@ -138,7 +140,11 @@ async function ask(query) {
     const res = await fetch("/api/query", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q, mode: MODE }),
+      body: JSON.stringify({
+        query: q,
+        mode: MODE,
+        language: languageSelect.value || null,
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

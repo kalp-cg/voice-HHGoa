@@ -27,6 +27,7 @@ LANG_TRAIN_FILES = {
     "pa": "train/pantrain.parquet",
     "sa": "train/santrain.parquet",
     "ta": "train/tamtrain.parquet",
+    "te": "train/teltrain.parquet",
     "ur": "train/urdtrain.parquet",
 }
 

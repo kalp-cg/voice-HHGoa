@@ -19,13 +19,25 @@ async def health() -> dict:
     )
     index_ok = False
     points = 0
+    languages: list[str] = []
     retrieval_mode = (settings.retrieval_mode or "hybrid").strip().lower()
 
     chunks_path = Path(settings.qdrant_path) / "chunks.jsonl"
     if chunks_path.is_file():
         index_ok = True
         try:
-            points = sum(1 for line in chunks_path.open(encoding="utf-8") if line.strip())
+            import json
+
+            langs: set[str] = set()
+            with chunks_path.open(encoding="utf-8") as fh:
+                for line in fh:
+                    if not line.strip():
+                        continue
+                    points += 1
+                    lang = (json.loads(line).get("language") or "").strip()
+                    if lang:
+                        langs.add(lang)
+            languages = sorted(langs)
         except OSError:
             points = 0
     elif retrieval_mode != "sparse":
@@ -45,6 +57,7 @@ async def health() -> dict:
         "elevenlabs_configured": bool(settings.elevenlabs_api_key),
         "index_ready": index_ok,
         "index_points": points,
+        "languages": languages,
         "retrieval_mode": retrieval_mode,
         "ollama": ollama_up,
         "ollama_model": settings.ollama_model,

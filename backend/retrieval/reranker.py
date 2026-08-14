@@ -9,14 +9,26 @@ from typing import Any
 from backend.retrieval.dedupe import dedupe_hits
 
 _CAP = re.compile(r"\b[A-Z][A-Za-z]{2,}\b")
-_TOKEN = re.compile(r"[\w\u0900-\u097F]+", re.UNICODE)
+_TOKEN = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF]+", re.UNICODE)
 
 
 _STOP = {
     "the", "a", "an", "is", "are", "of", "in", "to", "and", "or", "for", "that",
     "this", "it", "on", "with", "as", "be", "was", "were", "by", "what", "where",
     "who", "how", "when", "which", "does", "do", "did", "can", "you", "me",
-    "please", "tell",
+    "please", "tell", "located",
+    "कहाँ", "कहा", "क्या", "कौन", "कैसे", "क्यों", "है", "हैं", "का", "की", "के",
+    "में", "से", "और", "कुत्र", "अस्ति", "आहे", "कुठे",
+    "কোথায়", "কত", "আছে", "একটি", "এবং",
+    "எங்கே", "என்ன", "உள்ளது", "ஒரு",
+    "ఎక్కడ", "ఉంది", "ఒక",
+    "ಎಲ್ಲಿದೆ", "ಇದೆ", "ಒಂದು",
+    "എവിടെയാണ്", "ആണ്", "ഒരു",
+    "ક્યાં", "છે", "એક",
+    "کہاں", "ہے", "ایک",
+    "छ", "हो",
+    "କେଉଁଠି", "ଅଛି", "ଏକ",
+    "ਕਿੱਥੇ", "ਹੈ", "ਇੱਕ",
 }
 
 

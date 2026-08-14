@@ -85,7 +85,12 @@ async def retrieve_sparse(body: RetrieveRequest) -> RetrieveResponse:
 
     t0 = time.perf_counter()
     try:
-        hits_raw = sparse_search(query, limit=body.top_k, path=settings.qdrant_path)
+        hits_raw = sparse_search(
+            query,
+            limit=body.top_k,
+            path=settings.qdrant_path,
+            language=body.language,
+        )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=f"BM25 search failed: {exc}") from exc
     t_ms = (time.perf_counter() - t0) * 1000
@@ -150,11 +155,11 @@ async def retrieve_hybrid(body: RetrieveRequest) -> RetrieveResponse:
 
 @router.post("/api/query", response_model=QueryResponse)
 async def query_rag(body: QueryRequest) -> QueryResponse:
-    result = run_pipeline(body.query, mode=body.mode)
+    result = run_pipeline(body.query, mode=body.mode, language=body.language)
     return QueryResponse(**result)
 
 
 @router.post("/api/query/fast", response_model=QueryResponse)
 async def query_fast(body: QueryRequest) -> QueryResponse:
-    result = run_pipeline(body.query, mode="fast")
+    result = run_pipeline(body.query, mode="fast", language=body.language)
     return QueryResponse(**result)

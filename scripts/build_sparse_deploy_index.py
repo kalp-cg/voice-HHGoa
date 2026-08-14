@@ -36,6 +36,18 @@ def _load_bootstrap(path: Path) -> list[dict]:
     return rows
 
 
+def _align_record(rec: dict) -> dict:
+    """Keep the passage that matches the record language so BM25 does not
+    search English fragments for a Tamil / Hindi / Urdu query."""
+    aligned = dict(rec)
+    lang = str(aligned.get("language") or "")
+    if lang and lang != "en":
+        aligned["english_passages"] = []
+    else:
+        aligned["translated_passages"] = []
+    return aligned
+
+
 def _iter_local_jsonl(path: Path, limit: int) -> Iterator[dict]:
     with path.open(encoding="utf-8") as source:
         for i, line in enumerate(source):
@@ -47,18 +59,23 @@ def _iter_local_jsonl(path: Path, limit: int) -> Iterator[dict]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build sparse-only deploy chunk index")
-    parser.add_argument("--records", type=int, default=100)
-    parser.add_argument("--max-chunks", type=int, default=150)
+    parser.add_argument("--records", type=int, default=80)
+    parser.add_argument("--max-chunks", type=int, default=250)
     parser.add_argument("--record-batch", type=int, default=32)
     parser.add_argument(
         "--input-jsonl",
         type=Path,
-        default=Path("data/samples/deploy_msmarco_100.jsonl"),
+        default=Path("data/samples/deploy_msmarco_multilingual.jsonl"),
     )
     parser.add_argument(
         "--bootstrap",
         type=Path,
         default=Path("data/samples/bootstrap_msmarco.jsonl"),
+    )
+    parser.add_argument(
+        "--no-bootstrap",
+        action="store_true",
+        help="Do not prepend bootstrap_msmarco.jsonl (use for multilingual samples).",
     )
     parser.add_argument(
         "--output",
@@ -69,7 +86,7 @@ def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     seen_texts: set[str] = set()
-    record_batch: list[dict] = _load_bootstrap(args.bootstrap)
+    record_batch: list[dict] = [] if args.no_bootstrap else _load_bootstrap(args.bootstrap)
     bootstrap_n = len(record_batch)
     records_seen = bootstrap_n
     chunks_indexed = 0
@@ -88,7 +105,7 @@ def main() -> None:
             len(record_batch) * args.max_chunks / max(total_expected, 1)
         )
         chunks = compact_index_chunks(
-            record_batch,
+            [_align_record(rec) for rec in record_batch],
             max_chunks=min(remaining, max(proportional_cap, 1)),
         )
         for ch in chunks:
