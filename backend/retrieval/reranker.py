@@ -6,6 +6,12 @@ import math
 import re
 from typing import Any
 
+from backend.core.translit import (
+    any_fuzzy_match,
+    fuzzy_key,
+    is_mixed_script,
+    romanize_token,
+)
 from backend.retrieval.dedupe import dedupe_hits
 
 _CAP = re.compile(r"\b[A-Z][A-Za-z]{2,}\b")
@@ -24,7 +30,7 @@ _STOP = {
     "ఎక్కడ", "ఉంది", "ఒక",
     "ಎಲ್ಲಿದೆ", "ಇದೆ", "ಒಂದು",
     "എവിടെയാണ്", "ആണ്", "ഒരു",
-    "ક્યાં", "છે", "એક",
+    "ક્યાં", "કયાં", "છે", "એક",
     "کہاں", "ہے", "ایک",
     "छ", "हो",
     "କେଉଁଠି", "ଅଛି", "ଏକ",
@@ -36,12 +42,25 @@ def _tokens(text: str) -> set[str]:
     return {t.lower() for t in _TOKEN.findall(text or "") if t.lower() not in _STOP and len(t) > 1}
 
 
-def _lexical_score(query: str, text: str) -> float:
+def _lexical_score(query: str, text: str, cross_script: bool = False) -> float:
     q = _tokens(query)
     d = _tokens(text)
     if not q or not d:
         return 0.0
-    return len(q & d) / len(q)
+    matched = len(q & d)
+    # Without this, the passage that answers a mixed-script question scores the
+    # same zero overlap as every unrelated passage in the same language.
+    if cross_script and matched < len(q):
+        buckets: dict[str, list[str]] = {}
+        for token in d:
+            roman = romanize_token(token)
+            if roman:
+                buckets.setdefault(fuzzy_key(roman), []).append(roman)
+        for token in q - d:
+            target = romanize_token(token)
+            if len(target) >= 3 and any_fuzzy_match(target, buckets):
+                matched += 1
+    return matched / len(q)
 
 
 def rerank(
@@ -57,11 +76,12 @@ def rerank(
     unique = dedupe_hits(hits)
     if not unique:
         return []
+    cross_script = is_mixed_script(query)
     ranked = []
     for hit in unique:
         row = dict(hit)
         text = f"{hit.get('text') or ''} {hit.get('parent_text') or ''}"
-        lex = _lexical_score(query, text)
+        lex = _lexical_score(query, text, cross_script=cross_script)
         orig = float(hit.get("orig_score") or 0.0)
         dense_bonus = 0.2 * orig if 0 < orig <= 1.5 else 0.0
         rrf = float(hit.get("rrf_score") or 0.0)

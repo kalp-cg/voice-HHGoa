@@ -43,3 +43,43 @@ def test_source_query_indexes_translation_without_exposing_it_as_passage():
     assert hits[0]["chunk_id"] == "relevant"
     assert hits[0]["text"] == "सेलिब्रिटीहरूले क्यान्सरसँग लड्दैछन्।"
     assert hits[0]["_source_query"] == "क्यान्सर भएका प्रसिद्ध व्यक्तिहरू"
+
+
+_GUJARATI_PASSAGES = {
+    "goa": "ગોવા ભારતના દક્ષિણ-પશ્ચિમ કિનારે આવેલું એક રાજ્ય છે.",
+    "boiling": "પાણીનું ઉકળવાનું તાપમાન 100 ડિગ્રી સેલ્સિયસ છે.",
+    "lawyer": "વકીલની ફી સામાન્ય રીતે કલાકના દરે વસૂલવામાં આવે છે.",
+    "glucose": "ગ્લુકોઝ એ શરીરની ઊર્જાનો મુખ્ય સ્રોત છે.",
+    "gujarat": "ગુજરાત ભારતના પશ્ચિમ ભાગમાં આવેલું રાજ્ય છે.",
+    "song": "આ ગીતનું રેકોર્ડિંગ 1998 માં થયું હતું.",
+}
+
+
+def _gujarati_index() -> BM25Index:
+    # BM25 gives a term zero weight once it appears in most of the corpus, so
+    # these assertions need more than a couple of passages to be meaningful.
+    return BM25Index(
+        [
+            SparseDoc(cid, text, "", "semantic", "gu", "translated", i)
+            for i, (cid, text) in enumerate(_GUJARATI_PASSAGES.items())
+        ]
+    )
+
+
+def test_latin_name_in_an_indic_question_finds_the_native_passage():
+    hits = _gujarati_index().search("Goa કયાં છે?")
+    assert hits
+    assert hits[0]["chunk_id"] == "goa"
+
+
+def test_cross_script_expansion_does_not_inject_false_friends():
+    extra = _gujarati_index()._cross_script_terms(["goa", "કયાં", "છે"], "Goa કયાં છે?")
+    assert "ગોવા" in extra
+    assert "ખોટા" not in extra
+    assert "ગોળા" not in extra
+
+
+def test_single_script_queries_skip_cross_script_expansion():
+    """Expansion is recall-only, so it must not disturb same-script ranking."""
+    hits = _gujarati_index().search("ઉકળવાનું તાપમાન")
+    assert hits[0]["chunk_id"] == "boiling"

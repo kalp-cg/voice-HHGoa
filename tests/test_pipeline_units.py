@@ -56,6 +56,19 @@ def test_exact_benchmark_pair_is_relevant_across_translation_variants():
     assert confidence == 1.0
 
 
+def test_latin_name_counts_as_covered_by_a_native_script_passage():
+    hits = [{"text": "ગોવા ભારતના દક્ષિણ-પશ્ચિમ કિનારે આવેલું એક રાજ્ય છે."}]
+    refuse, confidence, _ = should_refuse(hits, 0.5, "Goa કયાં છે?")
+    assert not refuse
+    assert confidence >= 0.5
+
+
+def test_cross_script_coverage_still_refuses_an_unrelated_passage():
+    hits = [{"text": "પાણીનું ઉકળવાનું તાપમાન 100 ડિગ્રી સેલ્સિયસ છે."}]
+    refuse, _, _ = should_refuse(hits, 0.5, "Goa કયાં છે?")
+    assert refuse
+
+
 def test_offtopic_rule_wins_over_source_query_metadata():
     query = "What is the weather in Goa today?"
     hits = [{"text": "Goa is a state.", "_source_query": query}]

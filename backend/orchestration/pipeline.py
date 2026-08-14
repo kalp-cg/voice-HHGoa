@@ -39,21 +39,26 @@ def _passages(hits: list[dict[str, Any]]) -> list[str]:
     return out
 
 
-_language_model_paths: set[str] = set()
+_prepared_paths: set[str] = set()
 
 
-def _train_language_model(qdrant_path: str) -> None:
-    """Teach language detection this index's own text, once per index.
+def _prepare_index(qdrant_path: str) -> None:
+    """Do this index's one-off derivations, once, off the measured path.
 
-    Detection has a working fallback, so a failure here must not stop a query.
+    Both teach the retriever about the index's own text: language detection
+    learns to tell apart languages that share a script, and cross-script
+    matching learns the Latin spelling of every indexed word. Each has a
+    working fallback, so a failure here must not stop a query.
     """
-    if qdrant_path in _language_model_paths:
+    if qdrant_path in _prepared_paths:
         return
-    _language_model_paths.add(qdrant_path)
+    _prepared_paths.add(qdrant_path)
     try:
         from backend.retrieval.sparse import get_bm25_index
 
-        train_language_classifier(get_bm25_index(qdrant_path).language_samples())
+        index = get_bm25_index(qdrant_path)
+        train_language_classifier(index.language_samples())
+        index.warm_cross_script_matching()
     except Exception:  # noqa: BLE001
         pass
 
@@ -79,7 +84,7 @@ def run_pipeline(
         retrieval_mode = "hybrid"
     # Nothing is selected by hand in the normal flow: the query's own script,
     # optionally narrowed by the language speech recognition reported, decides.
-    _train_language_model(settings.qdrant_path)
+    _prepare_index(settings.qdrant_path)
     languages = resolve_languages(query, forced=language, hint=language_hint)
     search_languages = retrieval_languages(
         query,

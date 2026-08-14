@@ -12,7 +12,21 @@ from typing import Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 
+from backend.core.translit import (
+    fuzzy_key,
+    fuzzy_keys,
+    fuzzy_score,
+    is_mixed_script,
+    romanize_token,
+    script_base,
+    scripts_in,
+)
+
 _TOKEN = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF]+", re.UNICODE)
+
+# A Latin word can plausibly romanise onto several indexed spellings; past a
+# handful the additions stop being the same name and start diluting the query.
+_MAX_CROSS_SCRIPT_TERMS = 8
 
 
 def tokenize(text: str) -> list[str]:
@@ -40,6 +54,61 @@ class BM25Index:
         # into the passage shown to users or used for grounded extraction.
         self._tokens = [tokenize(d.search_text or d.text) for d in docs]
         self._bm25 = BM25Okapi(self._tokens) if docs else None
+        self._roman_vocab: dict[str, dict[str, set[str]]] | None = None
+
+    def _romanized_vocabulary(self) -> dict[str, dict[str, set[str]]]:
+        """Indexed Indic tokens grouped by bucket key, then by Latin spelling."""
+        if self._roman_vocab is None:
+            vocab: dict[str, dict[str, set[str]]] = {}
+            for tokens in self._tokens:
+                for token in tokens:
+                    if token.isascii():
+                        continue
+                    roman = romanize_token(token)
+                    if len(roman) >= 3:
+                        bucket = vocab.setdefault(fuzzy_key(roman), {})
+                        bucket.setdefault(roman, set()).add(token)
+            self._roman_vocab = vocab
+        return self._roman_vocab
+
+    def warm_cross_script_matching(self) -> None:
+        """Build the romanised vocabulary before it lands on a timed query."""
+        self._romanized_vocabulary()
+
+    def _cross_script_terms(self, tokens: list[str], query: str = "") -> list[str]:
+        """Indexed Indic spellings of the Latin words in a mixed-script query.
+
+        `Goa કયાં છે?` otherwise retrieves on `કયાં`/`છે` alone, which every
+        Gujarati passage contains, so the one passage about `ગોવા` never wins.
+        """
+        latin = [t for t in tokens if t.isascii() and t.isalpha() and len(t) >= 3]
+        if not latin:
+            return []
+        vocab = self._romanized_vocabulary()
+        query_scripts = scripts_in(query)
+        scored: dict[str, tuple[float, float]] = {}
+        for word in latin:
+            seen: set[str] = set()
+            for key in fuzzy_keys(word):
+                for roman, natives in vocab.get(key, {}).items():
+                    if roman in seen:
+                        continue
+                    seen.add(roman)
+                    closeness = fuzzy_score(word, roman)
+                    if closeness <= 0.0:
+                        continue
+                    for native in natives:
+                        same_script = (
+                            1.0
+                            if native and script_base(native[0]) in query_scripts
+                            else 0.0
+                        )
+                        scored[native] = max(
+                            scored.get(native, (0.0, 0.0)),
+                            (closeness, same_script),
+                        )
+        best = sorted(scored, key=lambda t: scored[t], reverse=True)
+        return best[:_MAX_CROSS_SCRIPT_TERMS]
 
     def language_samples(self) -> dict[str, list[str]]:
         """Indexed text grouped by language, for training language detection."""
@@ -63,7 +132,10 @@ class BM25Index:
         q = tokenize(query)
         if not q:
             return []
-        scores = self._bm25.get_scores(q)
+        expanded = (
+            q + self._cross_script_terms(q, query) if is_mixed_script(query) else q
+        )
+        scores = self._bm25.get_scores(expanded)
         wanted = {l.strip().lower() for l in (languages or set()) if l and l.strip()}
         if language and language.strip():
             wanted = {language.strip().lower()}

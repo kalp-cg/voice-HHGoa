@@ -5,6 +5,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from backend.core.translit import (
+    any_fuzzy_match,
+    fuzzy_key,
+    is_mixed_script,
+    romanize_token,
+)
 from backend.generation.prompts import REFUSAL
 
 _TOKEN = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF]+", re.UNICODE)
@@ -21,7 +27,7 @@ STOP = {
     "ఎక్కడ", "ఉంది", "ఒక",
     "ಎಲ್ಲಿದೆ", "ಇದೆ", "ಒಂದು",
     "എവിടെയാണ്", "ആണ്", "ഒരു",
-    "ક્યાં", "છે", "એક",
+    "ક્યાં", "કયાં", "છે", "એક",
     "کيٿے", "کہاں", "ہے", "ایک",
     "छ", "हो",
     "କେଉଁଠି", "ଅଛି", "ଏକ",
@@ -44,6 +50,27 @@ def _content_tokens(text: str) -> set[str]:
     }
 
 
+def _cross_script_hits(missing: set[str], ctx: set[str]) -> int:
+    """Count query words the context spells in another script.
+
+    A Latin `Goa` and a Gujarati `ગોવા` share no characters, so plain overlap
+    reads a perfectly grounded answer as zero and refuses it.
+    """
+    buckets: dict[str, list[str]] = {}
+    for token in ctx:
+        roman = romanize_token(token)
+        if roman:
+            buckets.setdefault(fuzzy_key(roman), []).append(roman)
+    found = 0
+    for token in missing:
+        target = romanize_token(token)
+        if len(target) < 3:
+            continue
+        if any_fuzzy_match(target, buckets):
+            found += 1
+    return found
+
+
 def coverage(query: str, hits: list[dict[str, Any]], k: int = 5) -> float:
     q = _content_tokens(query)
     if not q:
@@ -51,7 +78,10 @@ def coverage(query: str, hits: list[dict[str, Any]], k: int = 5) -> float:
     ctx: set[str] = set()
     for h in hits[:k]:
         ctx |= _content_tokens(f"{h.get('text') or ''} {h.get('parent_text') or ''}")
-    return len(q & ctx) / len(q)
+    matched = len(q & ctx)
+    if matched < len(q) and is_mixed_script(query):
+        matched += _cross_script_hits(q - ctx, ctx)
+    return matched / len(q)
 
 
 def should_refuse(
