@@ -35,6 +35,34 @@ Observe transcript in browser/terminal.
 
 Then **freeze STT** and move to dataset inspection. Do not keep churning STT while building RAG.
 
+## Language handling (no dropdown)
+
+The demo never asks which language you speak, matching how ChatGPT and similar
+tools behave. Three signals, in increasing order of trust:
+
+1. **Scribe detection.** `Scribe.connect` is opened with
+   `includeLanguageDetection: true` (needs `@elevenlabs/client` ≥ 1.17.0; older
+   versions never send `include_language_detection`, so `language_code` always
+   came back `null`). The detected code arrives on
+   `committed_transcript_with_timestamps` and is sent to `/api/query` as
+   `language_hint`.
+2. **Script of the transcript.** `backend/core/languages.py` maps Unicode blocks
+   to languages. This is the primary signal because it describes the text that
+   will actually be retrieved, so it cannot disagree with it.
+3. **Function words.** Where several languages share a script (Devanagari →
+   Hindi / Marathi / Nepali / Sanskrit; Bengali → Bengali / Assamese),
+   interrogatives and copulas such as `कहाँ` / `कुठे` / `छ` / `अस्ति` pick one,
+   as do Assamese-only characters `ৰ` and `ৱ`.
+
+The hint is only honoured when it agrees with the script, so a misdetected
+language cannot send retrieval to the wrong corpus. Short spoken questions are
+exactly where acoustic detection is weakest — Whisper-class models detect from
+the first seconds of audio — and this is why detection alone is not trusted.
+
+`scripts/check_auto_language.py` asks the demo question in all 15 indexed
+languages with no hint at all; all 15 resolve to a passage in the same language.
+The dropdown remains only as a manual override.
+
 ## Secrets
 
 - Put key in `.env` as `ELEVENLABS_API_KEY`

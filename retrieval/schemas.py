@@ -38,6 +38,9 @@ class QueryRequest(BaseModel):
     query: str
     mode: Literal["fast", "generative"] | None = None
     language: str | None = None
+    # Language reported by speech recognition; accepted only when it agrees with
+    # the script of the query text.
+    language_hint: str | None = None
 
 
 class QueryResponse(BaseModel):
@@ -51,6 +54,7 @@ class QueryResponse(BaseModel):
     refusal_reason: str | None = None
     mode: str
     retrieval_mode: str | None = None
+    query_language: str | None = None
     sources: list[RetrieveHit]
     retrieval: dict[str, int]
     confidence: float

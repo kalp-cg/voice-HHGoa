@@ -41,6 +41,7 @@ class BM25Index:
         query: str,
         limit: int = 20,
         language: str | None = None,
+        languages: set[str] | None = None,
     ) -> list[dict[str, Any]]:
         if not self._bm25 or not self.docs:
             return []
@@ -48,14 +49,18 @@ class BM25Index:
         if not q:
             return []
         scores = self._bm25.get_scores(q)
-        lang = (language or "").strip().lower()
+        wanted = {l.strip().lower() for l in (languages or set()) if l and l.strip()}
+        if language and language.strip():
+            wanted = {language.strip().lower()}
         allowed_ids = [
             i
             for i, d in enumerate(self.docs)
-            if not lang or (d.language or "").strip().lower() == lang
+            if not wanted or (d.language or "").strip().lower() in wanted
         ]
+        # The filter is a precision aid, not a guarantee: an index that carries no
+        # passages for this language still has to answer.
         if not allowed_ids:
-            return []
+            allowed_ids = list(range(len(self.docs)))
         allowed = np.array(allowed_ids, dtype=int)
         sub = scores[allowed]
         candidate_count = min(limit, sub.size)
@@ -159,5 +164,11 @@ def sparse_search(
     limit: int = 20,
     path: str = "qdrant_storage/local",
     language: str | None = None,
+    languages: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    return get_bm25_index(path).search(query, limit=limit, language=language)
+    return get_bm25_index(path).search(
+        query,
+        limit=limit,
+        language=language,
+        languages=languages,
+    )

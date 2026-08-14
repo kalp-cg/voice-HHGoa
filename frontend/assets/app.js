@@ -1,4 +1,5 @@
-import { Scribe, RealtimeEvents } from "https://esm.sh/@elevenlabs/client@0.12.2";
+// 1.17.0 is the first version that can request language detection from Scribe.
+import { Scribe, RealtimeEvents } from "https://esm.sh/@elevenlabs/client@1.17.0";
 
 const btnStart = document.getElementById("btn-start");
 const btnStop = document.getElementById("btn-stop");
@@ -24,6 +25,10 @@ let queuedQuery = null;
 let voiceBuffer = "";
 let livePartial = "";
 let autoSendTimer = null;
+// Language the user forced via the dropdown, if any.
+let sttLanguage = null;
+// Language Scribe reported for the last committed segment.
+let detectedLanguage = null;
 
 function setStatus(text, kind = "") {
   statusEl.textContent = text;
@@ -143,7 +148,10 @@ async function ask(query) {
       body: JSON.stringify({
         query: q,
         mode: MODE,
-        language: languageSelect.value || null,
+        // Normally nothing is forced: the backend reads the script of the
+        // transcript and uses Scribe's guess only where the two agree.
+        language: sttLanguage,
+        language_hint: detectedLanguage,
       }),
     });
     if (!res.ok) {
@@ -152,12 +160,14 @@ async function ask(query) {
     }
     const data = await res.json();
     answerEl.textContent = data.answer || "—";
+    const lang = sttLanguage || detectedLanguage || data.query_language;
     const flags = [
+      lang ? `lang ${lang}${sttLanguage ? " (forced)" : " (auto)"}` : null,
       data.grounded ? "grounded" : "not grounded",
       data.refused ? `refused:${data.refusal_reason || "yes"}` : "answered",
       data.mode,
       `conf ${Number(data.confidence || 0).toFixed(2)}`,
-    ];
+    ].filter(Boolean);
     metaEl.textContent = flags.join(" · ");
     renderSources(data.sources);
     renderLatency(data.latency_ms);
@@ -198,16 +208,20 @@ async function start() {
       // finalize and a finished question can sit unsent for seconds.
       commitStrategy: "vad",
       vadSilenceThresholdSecs: 0.5,
+      includeTimestamps: true,
+      // Scribe only reports the language it detected when this is on.
+      includeLanguageDetection: true,
       microphone: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
       },
     };
-    // Auto-detect misreads short questions and can answer in the wrong script,
-    // so only omit the language when the user explicitly asks for detection.
+    // Empty value means auto-detect; the dropdown is only an override for
+    // noisy rooms where a short question gets misread.
     const language = languageSelect.value;
     if (language) options.languageCode = language;
+    sttLanguage = language || null;
     languageSelect.disabled = true;
     connection = Scribe.connect(options);
 
@@ -236,6 +250,11 @@ async function start() {
       voiceBuffer = `${voiceBuffer} ${text}`.trim();
       stageQuestion(voiceBuffer);
       scheduleAutoSend();
+    });
+
+    connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS, (data) => {
+      const code = (data.language_code || data.languageCode || "").trim().toLowerCase();
+      if (code) detectedLanguage = code;
     });
 
     connection.on(RealtimeEvents.ERROR, (error) => {

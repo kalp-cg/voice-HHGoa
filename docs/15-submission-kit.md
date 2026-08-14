@@ -73,8 +73,8 @@ capped to fit the target hardware, with measured scale-up checkpoints.
 
 1. Open https://voice-hhgoa.onrender.com (load it once beforehand so it is awake).
 2. Show `/health` reporting the index ready.
-3. Ask by voice: “Where is Goa located?” (set **Speaking** to English).
-4. Optional: switch **Speaking** to Hindi / Tamil / etc., play a matching YouTube clip on the laptop speaker, and show the same Goa fact answered in that language. The live index has one Goa passage per listed language (~72 KB sample), not the 55.6 GB dump.
+3. Ask by voice: “Where is Goa located?” Leave **Speaking** on *Auto-detect* — no language is selected anywhere in the demo.
+4. Play the same question in Hindi / Tamil / Bengali / etc. from a YouTube clip on the laptop speaker. Scribe transcribes, the script of the transcript picks the language, and the answer comes back in that language. The badge under the answer shows `lang xx (auto)`. The live index has one Goa passage per listed language (~72 KB sample), not the 55.6 GB dump.
 5. Show transcript, grounded answer, source passages, and stage latency.
 6. Ask: “What is the weather in Goa today?” and show refusal.
 7. Ask an unsafe query and show the safety refusal.

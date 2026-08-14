@@ -155,11 +155,21 @@ async def retrieve_hybrid(body: RetrieveRequest) -> RetrieveResponse:
 
 @router.post("/api/query", response_model=QueryResponse)
 async def query_rag(body: QueryRequest) -> QueryResponse:
-    result = run_pipeline(body.query, mode=body.mode, language=body.language)
+    result = run_pipeline(
+        body.query,
+        mode=body.mode,
+        language=body.language,
+        language_hint=body.language_hint,
+    )
     return QueryResponse(**result)
 
 
 @router.post("/api/query/fast", response_model=QueryResponse)
 async def query_fast(body: QueryRequest) -> QueryResponse:
-    result = run_pipeline(body.query, mode="fast", language=body.language)
+    result = run_pipeline(
+        body.query,
+        mode="fast",
+        language=body.language,
+        language_hint=body.language_hint,
+    )
     return QueryResponse(**result)

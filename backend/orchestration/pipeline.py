@@ -7,6 +7,7 @@ import time
 from typing import Any, Literal
 
 from backend.core.config import Settings, get_settings
+from backend.core.languages import resolve_languages
 from backend.core.telemetry import StageTimer
 from backend.generation.extractive import extractive_answer
 from backend.generation.llm import OllamaError, generate_answer, ollama_has_model
@@ -39,6 +40,7 @@ def run_pipeline(
     mode: AnswerMode | None = None,
     settings: Settings | None = None,
     language: str | None = None,
+    language_hint: str | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
     mode = mode or settings.default_answer_mode  # type: ignore[assignment]
@@ -51,6 +53,9 @@ def run_pipeline(
     retrieval_mode = (settings.retrieval_mode or "hybrid").strip().lower()
     if retrieval_mode not in ("hybrid", "sparse"):
         retrieval_mode = "hybrid"
+    # Nothing is selected by hand in the normal flow: the query's own script,
+    # optionally narrowed by the language speech recognition reported, decides.
+    languages = resolve_languages(query, forced=language, hint=language_hint)
 
     envelope: dict[str, Any] = {
         "request_id": request_id,
@@ -61,6 +66,7 @@ def run_pipeline(
         "refusal_reason": None,
         "mode": mode,
         "retrieval_mode": retrieval_mode,
+        "query_language": ",".join(sorted(languages)),
         "sources": [],
         "retrieval": {"candidates": 0, "selected": 0},
         "confidence": 0.0,
@@ -116,7 +122,7 @@ def run_pipeline(
                 query,
                 limit=settings.hybrid_candidates,
                 path=settings.qdrant_path,
-                language=language,
+                languages=languages,
             )
         except Exception as exc:  # noqa: BLE001
             sparse_hits = []
