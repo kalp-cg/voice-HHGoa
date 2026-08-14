@@ -46,6 +46,14 @@ def test_stt_hint_narrows_within_a_shared_script():
     assert resolve_languages(ambiguous, hint="ne") == {"ne"}
 
 
+def test_language_marker_must_be_a_whole_word():
+    # "है" occurs as characters inside the Nepali word "भएका"; substring
+    # matching used to misclassify this sentence as Hindi.
+    query = "क्यान्सर भएका वा भएका प्रसिद्ध व्यक्तिहरू"
+    assert "ne" in detect_languages(query)
+    assert "hi" in detect_languages(query)
+
+
 def test_language_filter_falls_back_when_index_lacks_the_language():
     docs = [
         SparseDoc("a", "Goa is a coastal state in India.", "", "semantic", "en", "english", 1),

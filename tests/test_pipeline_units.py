@@ -43,6 +43,26 @@ def test_unsafe_and_relevance():
     assert weather
 
 
+def test_exact_benchmark_pair_is_relevant_across_translation_variants():
+    query = "क्यान्सर भएका प्रसिद्ध व्यक्तिहरू"
+    hits = [
+        {
+            "text": "सेलिब्रिटीहरूले क्यान्सरसँग लड्दैछन्।",
+            "_source_query": query,
+        }
+    ]
+    refuse, confidence, _ = should_refuse(hits, 0.2, query)
+    assert not refuse
+    assert confidence == 1.0
+
+
+def test_offtopic_rule_wins_over_source_query_metadata():
+    query = "What is the weather in Goa today?"
+    hits = [{"text": "Goa is a state.", "_source_query": query}]
+    refuse, _, _ = should_refuse(hits, 0.2, query)
+    assert refuse
+
+
 def test_grounding_overlap():
     hits = [{"parent_text": "New Delhi is the capital of India."}]
     ok, ratio, _ = verify_grounding("New Delhi is the capital of India.", hits, 0.2)

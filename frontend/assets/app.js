@@ -19,7 +19,9 @@ const languageSelect = document.getElementById("stt-language");
 const btnAgain = document.getElementById("btn-again");
 const micLabel = document.getElementById("mic-label");
 
-const AUTO_SEND_SILENCE_MS = 900;
+// Scribe's VAD first waits 0.5s for silence; this short post-commit pause lets
+// the language event arrive before the question is sent (~0.85s total).
+const AUTO_SEND_AFTER_COMMIT_MS = 350;
 const ASK_AGAIN_LABELS = {
   as: "আকৌ সোধক",
   bn: "আবার জিজ্ঞাসা করুন",
@@ -173,9 +175,8 @@ function sendStagedQuestion() {
 }
 
 /**
- * Send once the mic has been quiet for a moment. This runs off partial
- * transcripts as well as committed ones, so a slow or missing commit from the
- * server cannot leave a finished question waiting.
+ * Send only after Scribe has committed a VAD segment. Partial hypotheses are
+ * display-only: room noise must not start a retrieval request.
  */
 function scheduleAutoSend() {
   cancelAutoSend();
@@ -187,7 +188,7 @@ function scheduleAutoSend() {
     autoSendTimer = null;
     if (!textQuery.value.trim()) stageQuestion(spokenQuestion());
     sendStagedQuestion();
-  }, AUTO_SEND_SILENCE_MS);
+  }, AUTO_SEND_AFTER_COMMIT_MS);
 }
 
 async function ask(query) {
@@ -276,7 +277,11 @@ async function start() {
       // finalize and a finished question can sit unsent for seconds.
       commitStrategy: "vad",
       vadSilenceThresholdSecs: 0.5,
+      vadThreshold: 0.5,
+      minSpeechDurationMs: 500,
+      minSilenceDurationMs: 500,
       includeTimestamps: true,
+      noVerbatim: true,
       // Scribe only reports the language it detected when this is on.
       includeLanguageDetection: true,
       microphone: {
@@ -307,7 +312,6 @@ async function start() {
       livePartial = text;
       stageQuestion(spokenQuestion());
       setStatus("Listening…", "live");
-      scheduleAutoSend();
     });
 
     currentConnection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (data) => {

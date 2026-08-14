@@ -26,7 +26,11 @@ from backend.orchestration.pipeline import run_pipeline  # noqa: E402
 def main() -> int:
     sample = ROOT / "data/samples/deploy_msmarco_multilingual.jsonl"
     rows = [json.loads(l) for l in sample.read_text(encoding="utf-8").splitlines() if l.strip()]
-    queries = {(r.get("language") or "?"): (r.get("query") or "") for r in rows}
+    queries: dict[str, str] = {}
+    for row in rows:
+        # Curated demo rows are first; do not replace them with later benchmark
+        # rows now that the deployed sample contains more than one per language.
+        queries.setdefault(row.get("language") or "?", row.get("query") or "")
 
     failures = []
     for lang, query in sorted(queries.items()):

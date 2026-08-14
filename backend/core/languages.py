@@ -8,6 +8,8 @@ Hindi / Marathi / Nepali / Sanskrit) all of them stay eligible and BM25 picks.
 
 from __future__ import annotations
 
+import re
+
 # Ordered so the first matching range wins for a given character.
 _SCRIPTS: list[tuple[int, int, tuple[str, ...]]] = [
     (0x0900, 0x097F, ("hi", "mr", "ne", "sa")),  # Devanagari
@@ -31,14 +33,17 @@ _MARKERS: dict[str, tuple[str, ...]] = {
     "mr": ("कुठे", "आहे", "आहेत", "काय", "कोण", "कसे", "नाही", "आणि", "मी"),
     "ne": ("छ", "छन्", "छैन", "कस्तो", "हुन्छ", "तपाईं", "गर्नु"),
     "sa": ("अस्ति", "कुत्र", "किम्", "कथम्", "भवति", "तत्र", "यत्र", "एव"),
-    "bn": ("কোথায়", "কি", "আমি", "নেই", "এবং", "কেন"),
-    "as": ("ক'ত", "কেনে", "মোৰ", "হয়", "নাই"),
+    # Bengali and Assamese share many ordinary words. Only use their distinct
+    # "where" forms here; otherwise keep both eligible and let retrieval decide.
+    "bn": ("কোথায়",),
+    "as": ("ক'ত",),
 }
 
 # Characters used by one language of a shared script only.
 _EXCLUSIVE_CHARS: dict[str, tuple[str, ...]] = {
     "as": ("ৰ", "ৱ"),  # Assamese ra / wa, absent from Bengali
 }
+_WORD = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF']+", re.UNICODE)
 
 
 def _refine(text: str, candidates: tuple[str, ...] | set[str]) -> set[str]:
@@ -51,8 +56,10 @@ def _refine(text: str, candidates: tuple[str, ...] | set[str]) -> set[str]:
         if lang in cands and any(c in text for c in chars):
             return {lang}
 
+    words = set(_WORD.findall(text))
     scores = {
-        lang: sum(1 for word in _MARKERS.get(lang, ()) if word in text) for lang in cands
+        lang: sum(1 for word in _MARKERS.get(lang, ()) if word in words)
+        for lang in cands
     }
     best = max(scores.values())
     if best == 0:

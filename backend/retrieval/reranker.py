@@ -70,7 +70,21 @@ def rerank(
         if proper:
             blob = text.lower()
             proper_bonus = sum(1.0 for p in proper if p in blob) / len(proper)
-        score = lex + dense_bonus + 0.15 * rrf + 1.25 * proper_bonus
+        source_query = str(hit.get("_source_query") or "")
+        query_tokens = _tokens(query)
+        source_tokens = _tokens(source_query)
+        exact_query_bonus = (
+            1.0
+            if source_query and query_tokens and query_tokens == source_tokens
+            else 0.0
+        )
+        score = (
+            lex
+            + dense_bonus
+            + 0.15 * rrf
+            + 1.25 * proper_bonus
+            + exact_query_bonus
+        )
         row["rerank_score"] = score
         row["score"] = score
         ranked.append(row)

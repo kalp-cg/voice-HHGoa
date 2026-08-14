@@ -81,3 +81,25 @@ Keep raw / large artifacts **outside Git**:
 Repo contains code, configs, scripts, docs, **small** evaluation samples only.
 
 Never commit: full dataset, embeddings, Qdrant storage, large parquet/jsonl dumps.
+
+## Reproduce the live multilingual sample
+
+The live sample uses 15 rows per available language from the official
+[`ai4bharat/IndicMSMARCO`](https://huggingface.co/datasets/ai4bharat/IndicMSMARCO)
+small benchmark, plus one curated Goa row for each of 15 demo languages.
+Sanskrit has only the curated row because IndicMSMARCO has no Sanskrit config.
+
+```bash
+hf download ai4bharat/IndicMSMARCO --repo-type dataset \
+  --include "as/*.parquet" "bn/*.parquet" "gu/*.parquet" "hi/*.parquet" \
+            "kn/*.parquet" "ml/*.parquet" "mr/*.parquet" "ne/*.parquet" \
+            "or/*.parquet" "pa/*.parquet" "ta/*.parquet" "te/*.parquet" \
+            "ur/*.parquet" \
+  --local-dir /tmp/indic-msmarco-mini
+
+python scripts/build_multilingual_sample.py \
+  --parquet-root /tmp/indic-msmarco-mini --per-lang 15
+```
+
+Result: 210 records / ~296 KB source JSONL. The Docker build converts it to a
+300-chunk sparse index; no parquet or full dataset is committed.

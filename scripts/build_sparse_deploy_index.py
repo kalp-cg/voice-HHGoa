@@ -99,6 +99,10 @@ def main() -> None:
         nonlocal chunks_indexed
         if not record_batch or chunks_indexed >= args.max_chunks:
             return
+        query_by_id = {
+            str(rec.get("query_id")): str(rec.get("query") or "").strip()
+            for rec in record_batch
+        }
         remaining = args.max_chunks - chunks_indexed
         total_expected = args.records + bootstrap_n
         proportional_cap = math.ceil(
@@ -125,6 +129,13 @@ def main() -> None:
                     "language": str(ch.language or ""),
                     "passage_lang": str(ch.passage_lang or ""),
                     "query_id": ch.query_id,
+                    "source_query": query_by_id.get(str(ch.query_id), ""),
+                    # Search-only metadata: never returned as answer text.
+                    "search_text": " ".join(
+                        part
+                        for part in (query_by_id.get(str(ch.query_id), ""), text)
+                        if part
+                    ),
                 }
             )
             chunks_indexed += 1

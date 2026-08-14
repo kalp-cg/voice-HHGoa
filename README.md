@@ -120,7 +120,8 @@ Live: https://voice-hhgoa.onrender.com
 
 Render Free gives 512 MB RAM, which is not enough to hold the FastEmbed ONNX
 model, so the deployed image runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
-guardrails over a 150-chunk index baked at build time (~50 MB resident). Dense
+guardrails over a balanced 300-chunk / 15-language index baked at build time
+(77 MB peak RSS in the local sparse API check). Dense
 and hybrid endpoints return 501 there and answer normally on any host with
 ≥2 GB RAM. Local runs stay full hybrid.
 
@@ -132,6 +133,7 @@ Videos and `#RAGInGoa` posts are still yours.
 
 Index: [docs/README.md](./docs/README.md) · milestones: [docs/12-milestones-roadmap.md](./docs/12-milestones-roadmap.md)
 
-## Submission (you still do)
+## Submission (remaining user actions)
 
-GitHub repo, live URL (when you deploy), 2 videos, `#RAGInGoa` posts. This repo is **local-complete**.
+The public GitHub repository and live URL are ready. Record the two required
+videos, publish them with `#RAGInGoa`, and submit the form before the deadline.

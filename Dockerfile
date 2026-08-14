@@ -23,15 +23,15 @@ COPY frontend frontend
 COPY ingestion ingestion
 COPY retrieval retrieval
 COPY scripts scripts
-COPY data/samples data/samples
+COPY data/samples/deploy_msmarco_multilingual.jsonl data/samples/deploy_msmarco_multilingual.jsonl
 
-# Prebuild a tiny BM25 chunk store at image build time (no ONNX model).
+# Prebuild the balanced multilingual BM25 store at image build time (no ONNX).
 RUN python scripts/build_sparse_deploy_index.py \
       --input-jsonl data/samples/deploy_msmarco_multilingual.jsonl \
       --no-bootstrap \
-      --records 80 \
-      --max-chunks 250 \
-      --record-batch 16 \
+      --records 210 \
+      --max-chunks 300 \
+      --record-batch 32 \
       --output qdrant_storage/deploy/chunks.jsonl \
     && chmod +x scripts/deploy_start.sh
 

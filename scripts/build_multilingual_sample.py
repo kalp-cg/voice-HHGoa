@@ -208,7 +208,12 @@ def main() -> None:
         type=Path,
         default=Path("/tmp/indic-msmarco-mini"),
     )
-    parser.add_argument("--per-lang", type=int, default=0)
+    parser.add_argument(
+        "--per-lang",
+        type=int,
+        default=15,
+        help="Official IndicMSMARCO rows per language (Sanskrit uses curated data only).",
+    )
     parser.add_argument(
         "--out",
         type=Path,

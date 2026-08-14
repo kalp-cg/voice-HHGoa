@@ -4,22 +4,31 @@ Date: 2026-08-14
 N = 190 queries (`evaluation/queries.jsonl`) after one warmup  
 Mode: extractive / fast. STT excluded.
 
-**Demo index** (`qdrant_storage/local`, ~12k chunks):
+**Latest full-hybrid run** (`qdrant_storage/local`, ~12k chunks):
 
 | Stage | P50 | P70 | P100 |
 |-------|-----|-----|------|
-| Embedding | 10.2 | 13.6 | 36.8 |
-| Dense | 23.7 | 29.8 | 70.7 |
-| BM25 | 17.3 | 25.3 | 85.4 |
-| Fusion | 0.1 | 0.1 | 3.0 |
-| Rerank | 1.0 | 1.1 | 8.0 |
+| Embedding | 11.1 | 15.8 | 38.1 |
+| Dense | 34.4 | 41.0 | 95.7 |
+| BM25 | 34.1 | 52.9 | 96.6 |
+| Fusion | 0.1 | 0.1 | 6.2 |
+| Rerank | 0.9 | 1.2 | 16.5 |
 | Generation | 0.0 | 0.0 | 0.0 |
-| RAG total | **53.1** | **73.4** | **159.5** |
+| RAG total | **93.2** | **118.7** | **175.5** |
 
-**Rebuilt isolated index** (`qdrant_storage/scaled-10k`, 11,627 chunks from all 10,005 records): RAG total **P50 76.6 / P70 97.7 / P100 184.4**.
+Earlier same-day demo-index run: RAG total **P50 53.1 / P70 73.4 /
+P100 159.5**. Runtime load changes the absolute numbers; both measured runs
+stay below 200 ms at P100.
+
+**Rebuilt isolated index** (`qdrant_storage/scaled-10k`, 11,627 chunks from all
+10,005 records): RAG total **P50 76.6 / P70 97.7 / P100 184.4**.
 
 Adversarial refusal rate: **1.0**  
-Recall@5: 0.263 · MRR: 0.235–0.236
+Latest Recall@5: 0.328 · MRR: 0.265
+
+The memory-capped sparse deployment is evaluated separately over its balanced
+sample: **210/210 paired queries grounded**, with **209/210 same-language top
+hits**. Reproduce with `scripts/evaluate_sparse_sample.py`.
 
 Assignment target is **&lt;200 ms** for retrieval → answer. Both measured P100s meet it.
 

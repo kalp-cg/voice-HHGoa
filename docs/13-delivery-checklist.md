@@ -6,8 +6,8 @@
 
 ## Required deliverables
 
-- [ ] Public **GitHub** repository (code + docs; no secrets/data dumps) — `gh` token for `kalp-cg` is invalid
-- [ ] **Live working link** (demo URL) — Docker image `voice-rag-goa:test` builds and serves locally on `:7861`; public host still needed
+- [x] Public **GitHub** repository (code + docs; no secrets/data dumps) — https://github.com/kalp-cg/voice-HHGoa
+- [x] **Live working link** — https://voice-hhgoa.onrender.com
 - [ ] **Two videos** (as required by assignment brief)
 - [ ] Promotion posts with **`#RAGInGoa`**
 
@@ -35,6 +35,16 @@
 - [x] Hold-to-speak (or equivalent) mic UX
 - [x] Show transcript, answer, sources, grounded flag
 - [x] Dev/latency panel for stage timings
+- [x] One committed question per mic session; partial/noisy transcripts cannot auto-send
+- [x] Automatic language detection with a manual override
+
+## Verified deployment profile
+
+- [x] Render Free stays within 512 MB using BM25-only retrieval
+- [x] Balanced live sample: 210 records → 300 chunks across 15 languages
+- [x] Paired-query sparse evaluation: 210/210 grounded answers
+- [x] Automatic-language demo check: 15/15 Goa questions
+- [x] Local full hybrid remains available on hardware with ≥2 GB RAM
 
 ## Engineering story to tell
 

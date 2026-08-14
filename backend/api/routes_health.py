@@ -63,6 +63,6 @@ async def health() -> dict:
         "ollama_model": settings.ollama_model,
         "ollama_model_ready": model_ok,
         "default_mode": settings.default_answer_mode,
-        "milestone": 8,
+        "milestone": 21,
         "component": "voice-rag",
     }

@@ -12,8 +12,9 @@ Verified live on 2026-08-14:
 
 | Check | Result |
 |---|---|
-| `/health` | `status: ok`, `index_points: 150`, `retrieval_mode: sparse` |
-| English query | grounded answer, `total_rag` ≈ 21 ms |
+| `/health` | `status: ok`, `index_points: 300`, `retrieval_mode: sparse` |
+| Balanced sparse evaluation | 210/210 paired queries grounded; 209/210 same-language top hit |
+| English query | grounded answer |
 | Hindi query (`गोवा कहाँ है?`) | grounded Hindi answer |
 | Unsafe query | refused |
 | `/api/voice/scribe-token` | 200 with a single-use token (ElevenLabs key active) |
@@ -22,7 +23,9 @@ Verified live on 2026-08-14:
 
 Render Free caps RAM at 512 MB, which the FastEmbed ONNX model alone exceeds.
 The deployed image therefore runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
-guardrails over a 150-chunk index baked at Docker build time (~50 MB resident).
+guardrails over a balanced 210-record / 300-chunk index baked at Docker build
+time (77 MB peak RSS in the local sparse API check). It contains official small IndicMSMARCO benchmark rows
+plus the curated Goa fact in every supported language.
 `/api/retrieve/dense` and `/api/retrieve/hybrid` return 501 on Free. Full hybrid
 retrieval runs locally and on any host with ≥2 GB RAM.
 
@@ -73,8 +76,8 @@ capped to fit the target hardware, with measured scale-up checkpoints.
 
 1. Open https://voice-hhgoa.onrender.com (load it once beforehand so it is awake).
 2. Show `/health` reporting the index ready.
-3. Ask by voice: “Where is Goa located?” Leave **Speaking** on *Auto-detect* — no language is selected anywhere in the demo.
-4. Play the same question in Hindi / Tamil / Bengali / etc. from a YouTube clip on the laptop speaker. Scribe transcribes, the script of the transcript picks the language, and the answer comes back in that language. The badge under the answer shows `lang xx (auto)`. The live index has one Goa passage per listed language (~72 KB sample), not the 55.6 GB dump.
+3. Ask by voice: “Where is Goa located?” Leave **Language** on *Auto-detect (recommended)* — no language is selected anywhere in the demo.
+4. Play the same question in Hindi / Tamil / Bengali / etc. from a YouTube clip on the laptop speaker. Scribe transcribes, the script of the transcript picks the language, and the answer comes back in that language. The badge under the answer shows `lang xx (auto)`. The live source sample is ~296 KB (210 records / 300 chunks), not the 55.6 GB dump.
 5. Show transcript, grounded answer, source passages, and stage latency.
 6. Ask: “What is the weather in Goa today?” and show refusal.
 7. Ask an unsafe query and show the safety refusal.
@@ -102,6 +105,7 @@ Every post must include `#RAGInGoa`.
 
 - [x] Public GitHub link opens in an incognito window
 - [x] Public demo URL opens over HTTPS (https://voice-hhgoa.onrender.com) and the STT token endpoint returns 200
+- [x] Live corpus contains 300 balanced multilingual chunks and passes the paired-query evaluation
 - [ ] Video 1 is approximately 90 seconds and shows process
 - [ ] Video 2 demonstrates voice → transcript → answer end to end
 - [ ] Every team member posted both videos on all three platforms

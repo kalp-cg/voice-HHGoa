@@ -70,6 +70,14 @@ python scripts/build_sparse_deploy_index.py \
 python scripts/check_auto_language.py
 ```
 
+## One-question microphone lifecycle
+
+Partial transcripts are display-only. Auto-send starts only after Scribe emits a
+VAD-committed segment (`minSpeechDurationMs=500`, `minSilenceDurationMs=500`);
+the connection then closes before retrieval. This prevents background audio
+from becoming a second accidental query. The localized **Ask another question**
+button starts a fresh single-use token and a clean transcript buffer.
+
 ## Secrets
 
 - Put key in `.env` as `ELEVENLABS_API_KEY`
