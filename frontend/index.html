@@ -8,97 +8,114 @@
   </head>
   <body>
     <main class="shell">
-      <p class="brand">Voice RAG · Goa 2026</p>
-      <h1>Ask the knowledge base.</h1>
-      <p class="lede">
-        Speak or type. ElevenLabs transcribes, then retrieval and reranking
-        answer straight from the indexed passages. No LLM in this path — every
-        answer is grounded in retrieved text.
-      </p>
-      <p id="mode-note" class="lede mode-note">Checking retrieval mode…</p>
+      <header class="masthead">
+        <p class="brand">Voice RAG · Goa 2026</p>
+        <h1>Ask the knowledge base.</h1>
+        <p class="lede">
+          Speak in any of 15 languages. ElevenLabs transcribes, retrieval and
+          reranking answer straight from the indexed passages — no LLM, so every
+          answer is grounded in retrieved text.
+        </p>
+        <p id="mode-note" class="mode-note">Checking retrieval mode…</p>
+      </header>
 
-      <div class="controls">
-        <button type="button" id="btn-start" class="btn primary">Start mic</button>
-        <button type="button" id="btn-stop" class="btn" disabled>Stop</button>
-        <label class="toggle">
-          Speaking
-          <select id="stt-language" class="select">
-            <option value="" selected>Auto-detect</option>
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="bn">Bengali</option>
-            <option value="mr">Marathi</option>
-            <option value="ta">Tamil</option>
-            <option value="te">Telugu</option>
-            <option value="gu">Gujarati</option>
-            <option value="kn">Kannada</option>
-            <option value="ml">Malayalam</option>
-            <option value="pa">Punjabi</option>
-            <option value="as">Assamese</option>
-            <option value="or">Odia</option>
-            <option value="ne">Nepali</option>
-            <option value="ur">Urdu</option>
-            <option value="sa">Sanskrit</option>
-          </select>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" id="auto-send" checked />
-          Send automatically after ~1s of silence
-        </label>
-      </div>
-
-      <form id="text-form" class="text-row">
-        <input
-          id="text-query"
-          type="text"
-          placeholder="Speak, or type a question…"
-          autocomplete="off"
-        />
-        <button type="submit" class="btn primary">Ask</button>
-        <button type="button" id="btn-clear" class="btn">Clear</button>
-      </form>
-      <p class="hint">
-        Speech lands in the box above so you can edit it before it is sent. With
-        auto-send off, press <strong>Ask</strong> to search. Language is detected
-        automatically — retrieval follows the script of what you actually said.
-        Pick a language only to override detection in a noisy room. Try “Where is
-        Goa located?” in any listed language.
-      </p>
-
-      <p id="status" class="status" aria-live="polite">Idle</p>
-
-      <section class="panel">
-        <h2>Live (partial)</h2>
-        <p id="partial" class="transcript partial">—</p>
-      </section>
-
-      <section class="panel">
-        <h2>Transcript</h2>
-        <p id="transcript" class="transcript">—</p>
-      </section>
-
-      <section class="panel">
-        <h2>Answer</h2>
-        <p id="answer" class="answer">Speak or type a question to begin.</p>
-        <p id="meta" class="meta-line"></p>
-      </section>
-
-      <section class="panel">
-        <h2>Sources</h2>
-        <div id="sources" class="sources">
-          <p class="empty">No sources yet.</p>
+      <section class="card console">
+        <div class="mic-row">
+          <button type="button" id="btn-start" class="btn primary btn-mic">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="mic-label">Start mic</span>
+          </button>
+          <button type="button" id="btn-stop" class="btn" disabled>Stop</button>
+          <button type="button" id="btn-again" class="btn primary" hidden>
+            Ask another question
+          </button>
+          <p id="status" class="status" aria-live="polite">Idle</p>
         </div>
+
+        <form id="text-form" class="text-row">
+          <input
+            id="text-query"
+            type="text"
+            placeholder="Speak, or type a question…"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn primary">Ask</button>
+          <button type="button" id="btn-clear" class="btn ghost">Clear</button>
+        </form>
+
+        <div class="options">
+          <label class="field">
+            <span class="field-label">Language</span>
+            <select id="stt-language" class="select">
+              <option value="" selected>Auto-detect (recommended)</option>
+              <option value="en">English</option>
+              <option value="hi">हिन्दी · Hindi</option>
+              <option value="bn">বাংলা · Bengali</option>
+              <option value="mr">मराठी · Marathi</option>
+              <option value="ta">தமிழ் · Tamil</option>
+              <option value="te">తెలుగు · Telugu</option>
+              <option value="gu">ગુજરાતી · Gujarati</option>
+              <option value="kn">ಕನ್ನಡ · Kannada</option>
+              <option value="ml">മലയാളം · Malayalam</option>
+              <option value="pa">ਪੰਜਾਬੀ · Punjabi</option>
+              <option value="as">অসমীয়া · Assamese</option>
+              <option value="or">ଓଡ଼ିଆ · Odia</option>
+              <option value="ne">नेपाली · Nepali</option>
+              <option value="ur">اردو · Urdu</option>
+              <option value="sa">संस्कृतम् · Sanskrit</option>
+            </select>
+          </label>
+
+          <label class="switch">
+            <input type="checkbox" id="auto-send" checked />
+            <span class="track" aria-hidden="true"></span>
+            <span class="switch-text">Send after ~1s of silence</span>
+          </label>
+        </div>
+
+        <p class="hint">
+          The mic stops after each question, so background sound cannot send a
+          second one — press <strong>Ask another question</strong> to continue.
+          Language is detected from what you actually said; pick one only to
+          override detection in a noisy room.
+        </p>
       </section>
 
-      <section class="panel">
-        <h2>Latency (ms)</h2>
-        <table class="lat">
-          <thead>
-            <tr><th>Stage</th><th>ms</th></tr>
-          </thead>
-          <tbody id="latency"></tbody>
-        </table>
-      </section>
+      <div class="results">
+        <div class="col">
+          <section class="card">
+            <h2>Answer</h2>
+            <p id="answer" class="answer">Speak or type a question to begin.</p>
+            <p id="meta" class="meta-line"></p>
+          </section>
+
+          <section class="card">
+            <h2>Sources</h2>
+            <div id="sources" class="sources">
+              <p class="empty">No sources yet.</p>
+            </div>
+          </section>
+        </div>
+
+        <aside class="col side">
+          <section class="card">
+            <h2>Live</h2>
+            <p id="partial" class="transcript partial">—</p>
+            <h2 class="spaced">Transcript</h2>
+            <p id="transcript" class="transcript">—</p>
+          </section>
+
+          <section class="card">
+            <h2>Latency (ms)</h2>
+            <table class="lat">
+              <thead>
+                <tr><th>Stage</th><th>ms</th></tr>
+              </thead>
+              <tbody id="latency"></tbody>
+            </table>
+          </section>
+        </aside>
+      </div>
     </main>
     <script type="module" src="/assets/app.js"></script>
   </body>

@@ -16,8 +16,27 @@ const modeNote = document.getElementById("mode-note");
 const autoSendToggle = document.getElementById("auto-send");
 const btnClear = document.getElementById("btn-clear");
 const languageSelect = document.getElementById("stt-language");
+const btnAgain = document.getElementById("btn-again");
+const micLabel = document.getElementById("mic-label");
 
 const AUTO_SEND_SILENCE_MS = 900;
+const ASK_AGAIN_LABELS = {
+  as: "আকৌ সোধক",
+  bn: "আবার জিজ্ঞাসা করুন",
+  en: "Ask another question",
+  gu: "ફરીથી પૂછો",
+  hi: "फिर से पूछें",
+  kn: "ಮತ್ತೆ ಕೇಳಿ",
+  ml: "വീണ്ടും ചോദിക്കുക",
+  mr: "पुन्हा विचारा",
+  ne: "फेरि सोध्नुहोस्",
+  or: "ପୁଣି ପଚାରନ୍ତୁ",
+  pa: "ਦੁਬਾਰਾ ਪੁੱਛੋ",
+  sa: "पुनः पृच्छतु",
+  ta: "மீண்டும் கேளுங்கள்",
+  te: "మళ్లీ అడగండి",
+  ur: "دوبارہ پوچھیں",
+};
 
 let connection = null;
 let asking = false;
@@ -25,10 +44,12 @@ let queuedQuery = null;
 let voiceBuffer = "";
 let livePartial = "";
 let autoSendTimer = null;
+const silentClosures = new WeakSet();
 // Language the user forced via the dropdown, if any.
 let sttLanguage = null;
 // Language Scribe reported for the last committed segment.
 let detectedLanguage = null;
+let responseLanguage = "en";
 
 function setStatus(text, kind = "") {
   statusEl.textContent = text;
@@ -46,9 +67,8 @@ async function showRetrievalMode() {
     const langs = Array.isArray(health.languages) ? health.languages.join(", ") : "";
     modeNote.textContent =
       health.retrieval_mode === "sparse"
-        ? `Retrieval: BM25 + rerank over ${points} chunks` +
-          (langs ? ` in ${langs} (memory-capped host; dense + RRF run on the full deployment).` : " (memory-capped host).")
-        : `Retrieval: dense + BM25 + RRF + rerank over ${points} chunks.`;
+        ? `BM25 + rerank · ${points} chunks${langs ? ` · ${langs}` : ""} · memory-capped host`
+        : `Dense + BM25 + RRF + rerank · ${points} chunks`;
   } catch {
     modeNote.textContent = "Retrieval mode unavailable.";
   }
@@ -93,6 +113,42 @@ function cancelAutoSend() {
   }
 }
 
+function closeMic({ silent = false } = {}) {
+  const active = connection;
+  connection = null;
+  if (active) {
+    if (silent) silentClosures.add(active);
+    active.close();
+  }
+  btnStart.disabled = false;
+  btnStop.disabled = true;
+  languageSelect.disabled = false;
+}
+
+function resetForNextQuestion() {
+  cancelAutoSend();
+  voiceBuffer = "";
+  livePartial = "";
+  detectedLanguage = null;
+  responseLanguage = "en";
+  textQuery.value = "";
+  partialEl.textContent = "—";
+  transcriptEl.textContent = "—";
+  answerEl.textContent = "Listening for your next question…";
+  metaEl.innerHTML = "";
+  sourcesEl.innerHTML = `<p class="empty">No sources yet.</p>`;
+  latencyEl.innerHTML = "";
+  btnAgain.hidden = true;
+}
+
+function offerAnotherQuestion() {
+  micLabel.textContent = "Start mic";
+  // Labelled in the language of the answer, so a speaker who does not read
+  // English still knows how to continue.
+  btnAgain.textContent = ASK_AGAIN_LABELS[responseLanguage] || ASK_AGAIN_LABELS.en;
+  btnAgain.hidden = false;
+}
+
 function spokenQuestion() {
   return `${voiceBuffer} ${livePartial}`.trim();
 }
@@ -109,6 +165,10 @@ function sendStagedQuestion() {
   voiceBuffer = "";
   livePartial = "";
   textQuery.value = "";
+  // One mic session handles exactly one question. Closing before retrieval
+  // prevents room noise from becoming a second accidental query.
+  closeMic({ silent: true });
+  micLabel.textContent = "Start mic";
   ask(q);
 }
 
@@ -161,6 +221,8 @@ async function ask(query) {
     const data = await res.json();
     answerEl.textContent = data.answer || "—";
     const lang = sttLanguage || detectedLanguage || data.query_language;
+    responseLanguage =
+      data.sources?.[0]?.language || String(data.query_language || "en").split(",")[0];
     const flags = [
       lang ? `lang ${lang}${sttLanguage ? " (forced)" : " (auto)"}` : null,
       data.grounded ? "grounded" : "not grounded",
@@ -168,7 +230,9 @@ async function ask(query) {
       data.mode,
       `conf ${Number(data.confidence || 0).toFixed(2)}`,
     ].filter(Boolean);
-    metaEl.textContent = flags.join(" · ");
+    metaEl.innerHTML = flags
+      .map((flag) => `<span class="chip">${escapeHtml(flag)}</span>`)
+      .join("");
     renderSources(data.sources);
     renderLatency(data.latency_ms);
     setStatus(data.refused ? "Refused / insufficient context" : "Done", data.refused ? "error" : "live");
@@ -181,6 +245,8 @@ async function ask(query) {
       const next = queuedQuery;
       queuedQuery = null;
       ask(next);
+    } else {
+      offerAnotherQuestion();
     }
   }
 }
@@ -197,6 +263,8 @@ async function fetchScribeToken() {
 }
 
 async function start() {
+  resetForNextQuestion();
+  micLabel.textContent = "Listening";
   btnStart.disabled = true;
   setStatus("Fetching single-use token…");
   try {
@@ -223,14 +291,16 @@ async function start() {
     if (language) options.languageCode = language;
     sttLanguage = language || null;
     languageSelect.disabled = true;
-    connection = Scribe.connect(options);
+    const currentConnection = Scribe.connect(options);
+    connection = currentConnection;
 
-    connection.on(RealtimeEvents.SESSION_STARTED, () => {
+    currentConnection.on(RealtimeEvents.SESSION_STARTED, () => {
       setStatus("Listening — speak now", "live");
       btnStop.disabled = false;
     });
 
-    connection.on(RealtimeEvents.PARTIAL_TRANSCRIPT, (data) => {
+    currentConnection.on(RealtimeEvents.PARTIAL_TRANSCRIPT, (data) => {
+      if (connection !== currentConnection) return;
       const text = (data.text || "").trim();
       partialEl.textContent = text || "—";
       if (!text) return;
@@ -240,7 +310,8 @@ async function start() {
       scheduleAutoSend();
     });
 
-    connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (data) => {
+    currentConnection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (data) => {
+      if (connection !== currentConnection) return;
       const text = (data.text || "").trim();
       partialEl.textContent = "—";
       livePartial = "";
@@ -252,24 +323,34 @@ async function start() {
       scheduleAutoSend();
     });
 
-    connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS, (data) => {
+    currentConnection.on(RealtimeEvents.COMMITTED_TRANSCRIPT_WITH_TIMESTAMPS, (data) => {
+      if (connection !== currentConnection) return;
       const code = (data.language_code || data.languageCode || "").trim().toLowerCase();
       if (code) detectedLanguage = code;
     });
 
-    connection.on(RealtimeEvents.ERROR, (error) => {
+    currentConnection.on(RealtimeEvents.ERROR, (error) => {
+      if (connection !== currentConnection) return;
       setStatus(`Error: ${error?.message || error}`, "error");
     });
 
-    connection.on(RealtimeEvents.CLOSE, () => {
-      setStatus("Mic disconnected");
-      btnStart.disabled = false;
-      btnStop.disabled = true;
-      languageSelect.disabled = false;
-      connection = null;
+    currentConnection.on(RealtimeEvents.CLOSE, () => {
+      if (connection === currentConnection) {
+        connection = null;
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+        languageSelect.disabled = false;
+      }
+      if (silentClosures.has(currentConnection)) {
+        silentClosures.delete(currentConnection);
+        return;
+      }
+      micLabel.textContent = "Start mic";
+      setStatus("Mic stopped");
     });
   } catch (err) {
     setStatus(err.message || String(err), "error");
+    micLabel.textContent = "Start mic";
     btnStart.disabled = false;
     btnStop.disabled = true;
     languageSelect.disabled = false;
@@ -277,23 +358,19 @@ async function start() {
 }
 
 function stop() {
-  if (connection) {
-    connection.close();
-    connection = null;
-  }
-  btnStart.disabled = false;
-  btnStop.disabled = true;
-  languageSelect.disabled = false;
   if (!textQuery.value.trim()) stageQuestion(spokenQuestion());
   if (textQuery.value.trim()) {
     // Stopping the mic is an explicit "I'm done talking" signal.
     sendStagedQuestion();
     return;
   }
+  closeMic({ silent: true });
+  micLabel.textContent = "Start mic";
   setStatus("Stopped");
 }
 
 btnStart.addEventListener("click", start);
+btnAgain.addEventListener("click", start);
 btnStop.addEventListener("click", stop);
 textForm.addEventListener("submit", (e) => {
   e.preventDefault();
