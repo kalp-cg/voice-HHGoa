@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""Bootstrap a tiny local MSMARCO-shaped sample so RAG works while HF parquet downloads."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+SAMPLES = [
+    {
+        "query_id": 1,
+        "query": "भारत की राजधानी क्या है?",
+        "eng_query": "What is the capital of India?",
+        "answer": "नई दिल्ली भारत की राजधानी है।",
+        "eng_answer": "New Delhi is the capital of India.",
+        "query_type": "LOCATION",
+        "source_lang": "eng_Latn",
+        "target_lang": "hin_Deva",
+        "language": "hi",
+        "english_passages": [
+            "India is a country in South Asia. New Delhi is its capital and also the seat of the executive, legislative and judiciary branches of the Government of India. Mumbai is the financial capital.",
+            "The monsoon climate affects much of the Indian subcontinent. Agriculture remains an important sector of the economy.",
+        ],
+        "translated_passages": [
+            "भारत दक्षिण एशिया में एक देश है। नई दिल्ली इसकी राजधानी है और भारत सरकार की कार्यपालिका, विधायिका और न्यायपालिका की सीट भी है।",
+        ],
+        "is_selected": [1, 0],
+    },
+    {
+        "query_id": 2,
+        "query": "What is the capital of India?",
+        "eng_query": "What is the capital of India?",
+        "answer": "New Delhi is the capital of India.",
+        "eng_answer": "New Delhi is the capital of India.",
+        "query_type": "LOCATION",
+        "source_lang": "eng_Latn",
+        "target_lang": "eng_Latn",
+        "language": "en",
+        "english_passages": [
+            "New Delhi serves as the capital of India. It hosts the Rashtrapati Bhavan, Parliament House, and the Supreme Court of India.",
+            "Kolkata was the capital of British India until 1911, after which the capital was shifted to Delhi.",
+        ],
+        "translated_passages": [],
+        "is_selected": [1, 0],
+    },
+    {
+        "query_id": 3,
+        "query": "Who wrote the national anthem of India?",
+        "eng_query": "Who wrote the national anthem of India?",
+        "answer": "Rabindranath Tagore wrote Jana Gana Mana.",
+        "eng_answer": "Rabindranath Tagore wrote Jana Gana Mana.",
+        "query_type": "PERSON",
+        "source_lang": "eng_Latn",
+        "target_lang": "eng_Latn",
+        "language": "en",
+        "english_passages": [
+            "Jana Gana Mana, the national anthem of India, was written by Nobel laureate Rabindranath Tagore. It was first sung in 1911 and adopted as the national anthem in 1950.",
+            "Vande Mataram is the national song of India and was written by Bankim Chandra Chatterjee.",
+        ],
+        "translated_passages": [
+            "जन गण मन भारत का राष्ट्रगान है जिसे रवींद्रनाथ टैगोर ने लिखा था।",
+        ],
+        "is_selected": [1, 0],
+    },
+    {
+        "query_id": 4,
+        "query": "What is MS MARCO used for?",
+        "eng_query": "What is MS MARCO used for?",
+        "answer": "MS MARCO is a large-scale dataset for machine reading comprehension and passage ranking.",
+        "eng_answer": "MS MARCO is a large-scale dataset for machine reading comprehension and passage ranking.",
+        "query_type": "DESCRIPTION",
+        "source_lang": "eng_Latn",
+        "target_lang": "eng_Latn",
+        "language": "en",
+        "english_passages": [
+            "MS MARCO (Microsoft Machine Reading Comprehension) is a collection of anonymized real Bing user queries with corresponding passages and answers. It is widely used to benchmark retrieval and QA systems.",
+            "BEIR is a heterogeneous benchmark for information retrieval spanning multiple domains.",
+        ],
+        "translated_passages": [],
+        "is_selected": [1, 0],
+    },
+    {
+        "query_id": 5,
+        "query": "Where is Goa located?",
+        "eng_query": "Where is Goa located?",
+        "answer": "Goa is a state on the southwestern coast of India.",
+        "eng_answer": "Goa is a state on the southwestern coast of India.",
+        "query_type": "LOCATION",
+        "source_lang": "eng_Latn",
+        "target_lang": "eng_Latn",
+        "language": "en",
+        "english_passages": [
+            "Goa is a state on the southwestern coast of India within the Konkan region, bounded by Maharashtra to the north and Karnataka to the east and south, with the Arabian Sea forming its western coast.",
+            "Panaji is the capital of Goa. Tourism and mining have historically been important to its economy.",
+        ],
+        "translated_passages": [
+            "गोवा भारत के दक्षिण-पश्चिमी तट पर कोंकण क्षेत्र में स्थित एक राज्य है।",
+        ],
+        "is_selected": [1, 0],
+    },
+]
+
+
+def main() -> None:
+    out = Path("data/samples/bootstrap_msmarco.jsonl")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as f:
+        for row in SAMPLES:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    print(f"Wrote {len(SAMPLES)} bootstrap records → {out}")
+
+
+if __name__ == "__main__":
+    main()
