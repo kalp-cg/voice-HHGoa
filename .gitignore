@@ -1,4 +1,5 @@
 .env
+.cache/
 .cursor/*
 !.cursor/rules/
 __pycache__/
