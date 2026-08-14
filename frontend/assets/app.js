@@ -14,6 +14,7 @@ const textQuery = document.getElementById("text-query");
 const modeNote = document.getElementById("mode-note");
 const autoSendToggle = document.getElementById("auto-send");
 const btnClear = document.getElementById("btn-clear");
+const languageSelect = document.getElementById("stt-language");
 
 const AUTO_SEND_SILENCE_MS = 900;
 
@@ -184,7 +185,7 @@ async function start() {
   setStatus("Fetching single-use token…");
   try {
     const token = await fetchScribeToken();
-    connection = Scribe.connect({
+    const options = {
       token,
       modelId: "scribe_v2_realtime",
       // Commit on detected silence, otherwise the server decides when to
@@ -196,7 +197,13 @@ async function start() {
         noiseSuppression: true,
         autoGainControl: true,
       },
-    });
+    };
+    // Auto-detect misreads short questions and can answer in the wrong script,
+    // so only omit the language when the user explicitly asks for detection.
+    const language = languageSelect.value;
+    if (language) options.languageCode = language;
+    languageSelect.disabled = true;
+    connection = Scribe.connect(options);
 
     connection.on(RealtimeEvents.SESSION_STARTED, () => {
       setStatus("Listening — speak now", "live");
@@ -233,12 +240,14 @@ async function start() {
       setStatus("Mic disconnected");
       btnStart.disabled = false;
       btnStop.disabled = true;
+      languageSelect.disabled = false;
       connection = null;
     });
   } catch (err) {
     setStatus(err.message || String(err), "error");
     btnStart.disabled = false;
     btnStop.disabled = true;
+    languageSelect.disabled = false;
   }
 }
 
@@ -249,6 +258,7 @@ function stop() {
   }
   btnStart.disabled = false;
   btnStop.disabled = true;
+  languageSelect.disabled = false;
   if (!textQuery.value.trim()) stageQuestion(spokenQuestion());
   if (textQuery.value.trim()) {
     // Stopping the mic is an explicit "I'm done talking" signal.

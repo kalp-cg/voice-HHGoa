@@ -99,6 +99,20 @@ h1 {
   accent-color: var(--accent);
 }
 
+.select {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+}
+
+.select:disabled {
+  opacity: 0.5;
+}
+
 .btn {
   appearance: none;
   border: 1px solid var(--line);

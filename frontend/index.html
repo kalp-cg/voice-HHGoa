@@ -21,6 +21,22 @@
         <button type="button" id="btn-start" class="btn primary">Start mic</button>
         <button type="button" id="btn-stop" class="btn" disabled>Stop</button>
         <label class="toggle">
+          Speaking
+          <select id="stt-language" class="select">
+            <option value="en" selected>English</option>
+            <option value="hi">Hindi</option>
+            <option value="bn">Bengali</option>
+            <option value="mr">Marathi</option>
+            <option value="ta">Tamil</option>
+            <option value="te">Telugu</option>
+            <option value="gu">Gujarati</option>
+            <option value="kn">Kannada</option>
+            <option value="ml">Malayalam</option>
+            <option value="pa">Punjabi</option>
+            <option value="">Auto-detect</option>
+          </select>
+        </label>
+        <label class="toggle">
           <input type="checkbox" id="auto-send" checked />
           Send automatically after ~1s of silence
         </label>
@@ -38,7 +54,9 @@
       </form>
       <p class="hint">
         Speech lands in the box above so you can edit it before it is sent. With
-        auto-send off, press <strong>Ask</strong> to search.
+        auto-send off, press <strong>Ask</strong> to search. Pick your spoken
+        language before starting the mic — auto-detect can misread short
+        questions.
       </p>
 
       <p id="status" class="status" aria-live="polite">Idle</p>
