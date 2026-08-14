@@ -1,0 +1,14 @@
+.git
+.cursor
+.env
+.venv
+__pycache__
+.pytest_cache
+qdrant_storage
+data/raw
+data/processed
+data/manifests
+evaluation/results
+*.parquet
+*.bin
+*.safetensors
