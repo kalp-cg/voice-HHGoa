@@ -63,6 +63,13 @@ the first seconds of audio — and this is why detection alone is not trusted.
 languages with no hint at all; all 15 resolve to a passage in the same language.
 The dropdown remains only as a manual override.
 
+```bash
+python scripts/build_sparse_deploy_index.py \
+  --input-jsonl data/samples/deploy_msmarco_multilingual.jsonl \
+  --no-bootstrap --output qdrant_storage/deploy-lang/chunks.jsonl
+python scripts/check_auto_language.py
+```
+
 ## Secrets
 
 - Put key in `.env` as `ELEVENLABS_API_KEY`
