@@ -15,12 +15,13 @@ const modeNote = document.getElementById("mode-note");
 const autoSendToggle = document.getElementById("auto-send");
 const btnClear = document.getElementById("btn-clear");
 
-const AUTO_SEND_DELAY_MS = 1500;
+const AUTO_SEND_SILENCE_MS = 900;
 
 let connection = null;
 let asking = false;
 let queuedQuery = null;
 let voiceBuffer = "";
+let livePartial = "";
 let autoSendTimer = null;
 
 function setStatus(text, kind = "") {
@@ -84,6 +85,10 @@ function cancelAutoSend() {
   }
 }
 
+function spokenQuestion() {
+  return `${voiceBuffer} ${livePartial}`.trim();
+}
+
 function stageQuestion(text) {
   textQuery.value = text;
   transcriptEl.textContent = text || "—";
@@ -94,21 +99,27 @@ function sendStagedQuestion() {
   const q = textQuery.value.trim();
   if (!q) return;
   voiceBuffer = "";
+  livePartial = "";
   textQuery.value = "";
   ask(q);
 }
 
+/**
+ * Send once the mic has been quiet for a moment. This runs off partial
+ * transcripts as well as committed ones, so a slow or missing commit from the
+ * server cannot leave a finished question waiting.
+ */
 function scheduleAutoSend() {
   cancelAutoSend();
   if (!autoSendToggle.checked) {
     setStatus("Heard you — press Ask to search", "live");
     return;
   }
-  setStatus("Heard you — searching…", "live");
   autoSendTimer = setTimeout(() => {
     autoSendTimer = null;
+    if (!textQuery.value.trim()) stageQuestion(spokenQuestion());
     sendStagedQuestion();
-  }, AUTO_SEND_DELAY_MS);
+  }, AUTO_SEND_SILENCE_MS);
 }
 
 async function ask(query) {
@@ -176,6 +187,10 @@ async function start() {
     connection = Scribe.connect({
       token,
       modelId: "scribe_v2_realtime",
+      // Commit on detected silence, otherwise the server decides when to
+      // finalize and a finished question can sit unsent for seconds.
+      commitStrategy: "vad",
+      vadSilenceThresholdSecs: 0.5,
       microphone: {
         echoCancellation: true,
         noiseSuppression: true,
@@ -189,12 +204,19 @@ async function start() {
     });
 
     connection.on(RealtimeEvents.PARTIAL_TRANSCRIPT, (data) => {
-      partialEl.textContent = data.text || "—";
+      const text = (data.text || "").trim();
+      partialEl.textContent = text || "—";
+      if (!text) return;
+      livePartial = text;
+      stageQuestion(spokenQuestion());
+      setStatus("Listening…", "live");
+      scheduleAutoSend();
     });
 
     connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (data) => {
       const text = (data.text || "").trim();
       partialEl.textContent = "—";
+      livePartial = "";
       if (!text) return;
       // Segments of one spoken question arrive separately; merge them so the
       // whole sentence is retrieved once instead of per fragment.
@@ -227,6 +249,7 @@ function stop() {
   }
   btnStart.disabled = false;
   btnStop.disabled = true;
+  if (!textQuery.value.trim()) stageQuestion(spokenQuestion());
   if (textQuery.value.trim()) {
     // Stopping the mic is an explicit "I'm done talking" signal.
     sendStagedQuestion();
@@ -245,6 +268,7 @@ textForm.addEventListener("submit", (e) => {
 btnClear.addEventListener("click", () => {
   cancelAutoSend();
   voiceBuffer = "";
+  livePartial = "";
   textQuery.value = "";
   partialEl.textContent = "—";
   setStatus("Cleared");
@@ -255,6 +279,7 @@ textQuery.addEventListener("input", () => {
   // Typing or editing means the user wants to control the send themselves.
   cancelAutoSend();
   voiceBuffer = textQuery.value.trim();
+  livePartial = "";
 });
 
 showRetrievalMode();
