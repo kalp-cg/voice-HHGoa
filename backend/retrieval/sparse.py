@@ -14,12 +14,11 @@ from rank_bm25 import BM25Okapi
 
 from backend.core.translit import (
     fuzzy_key,
-    fuzzy_keys,
-    fuzzy_score,
-    is_mixed_script,
+    related_skeletons,
     romanize_token,
     script_base,
     scripts_in,
+    skeleton,
 )
 
 _TOKEN = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF]+", re.UNICODE)
@@ -55,28 +54,75 @@ class BM25Index:
         self._tokens = [tokenize(d.search_text or d.text) for d in docs]
         self._bm25 = BM25Okapi(self._tokens) if docs else None
         self._roman_vocab: dict[str, dict[str, set[str]]] | None = None
+        self._skeleton_vocab: dict[str, dict[str, set[str]]] | None = None
         self._lang_scripts: dict[str, int | None] | None = None
 
     def _romanized_vocabulary(self) -> dict[str, dict[str, set[str]]]:
-        """Indexed Indic tokens grouped by bucket key, then by Latin spelling."""
+        """Indexed Indic tokens grouped by first letter and by consonant skeleton."""
         if self._roman_vocab is None:
             vocab: dict[str, dict[str, set[str]]] = {}
+            skel_vocab: dict[str, dict[str, set[str]]] = {}
             for tokens in self._tokens:
                 for token in tokens:
                     if token.isascii():
                         continue
                     roman = romanize_token(token)
-                    if len(roman) >= 3:
-                        bucket = vocab.setdefault(fuzzy_key(roman), {})
-                        bucket.setdefault(roman, set()).add(token)
+                    if len(roman) < 3:
+                        continue
+                    vocab.setdefault(fuzzy_key(roman), {}).setdefault(roman, set()).add(
+                        token
+                    )
+                    skel = skeleton(roman)
+                    if skel:
+                        skel_vocab.setdefault(skel, {}).setdefault(roman, set()).add(
+                            token
+                        )
             self._roman_vocab = vocab
+            self._skeleton_vocab = skel_vocab
         return self._roman_vocab
 
     def warm_cross_script_matching(self) -> None:
         """Build the romanised vocabulary before it lands on a timed query."""
         self._romanized_vocabulary()
 
-    def _cross_script_terms(self, tokens: list[str], query: str = "") -> list[str]:
+    def _expandable_tokens(
+        self,
+        tokens: list[str],
+        query: str,
+        wanted: set[str],
+    ) -> list[str]:
+        """Words BM25 cannot already see in the scripts it is about to search.
+
+        A long Hindi question with one English loanword (`guarantee`) used to
+        fuzzy-scan every Indic token against the whole vocab. Only the Latin
+        name, or a word written in the wrong script, actually needs expansion.
+        """
+        query_scripts = scripts_in(query)
+        lang_scripts = self._language_scripts()
+        wanted_scripts = {
+            base
+            for code in wanted
+            if (base := lang_scripts.get(code)) is not None
+        }
+        need_other_script = bool(wanted_scripts - query_scripts)
+        out: list[str] = []
+        for token in tokens:
+            if len(token) < 3:
+                continue
+            if token.isascii() and token.isalpha():
+                if query_scripts:
+                    out.append(token)
+                continue
+            if need_other_script and not token.isascii():
+                out.append(token)
+        return out
+
+    def _cross_script_terms(
+        self,
+        tokens: list[str],
+        query: str = "",
+        languages: set[str] | None = None,
+    ) -> list[str]:
         """Indexed spellings of this query's words in the corpus's other scripts.
 
         Two cases need it. `Goa કયાં છે?` otherwise retrieves on `કયાં`/`છે`
@@ -85,33 +131,34 @@ class BM25Index:
         wrong script, the transcript shares no characters with the passages
         that answer it, in any language.
         """
-        words = [
-            t
-            for t in tokens
-            if len(t) >= 3 and (t.isascii() and t.isalpha() or not t.isascii())
-        ]
+        wanted = {l.strip().lower() for l in (languages or set()) if l and l.strip()}
+        words = self._expandable_tokens(tokens, query, wanted)
         if not words:
             return []
-        vocab = self._romanized_vocabulary()
+        self._romanized_vocabulary()
+        skel_vocab = self._skeleton_vocab or {}
         scored: dict[str, tuple[float, float]] = {}
         for word in words:
             roman_word = romanize_token(word)
             if len(roman_word) < 3:
                 continue
             word_script = script_base(word[0])
+            word_skel = skeleton(roman_word)
             seen: set[str] = set()
-            for key in fuzzy_keys(roman_word):
-                for roman, natives in vocab.get(key, {}).items():
+            for key in related_skeletons(roman_word):
+                for roman, natives in skel_vocab.get(key, {}).items():
                     if roman in seen:
                         continue
                     seen.add(roman)
-                    # Same-name spellings stay within ~2× length; this rejects
-                    # most of a large bucket before fuzzy scoring runs.
                     shorter, longer = sorted((len(roman_word), len(roman)))
                     if longer > 2 * shorter or abs(len(roman_word) - len(roman)) > 3:
                         continue
-                    closeness = fuzzy_score(roman_word, roman)
-                    if closeness <= 0.0:
+                    roman_skel = skeleton(roman)
+                    if roman_skel == word_skel:
+                        closeness = 1.0 if roman == roman_word else 0.95
+                    elif roman_word[0] == roman[0]:
+                        closeness = 0.9
+                    else:
                         continue
                     for native in natives:
                         # Another spelling in the script this word is already
@@ -186,11 +233,8 @@ class BM25Index:
         wanted = {l.strip().lower() for l in (languages or set()) if l and l.strip()}
         if language and language.strip():
             wanted = {language.strip().lower()}
-        expanded = (
-            q + self._cross_script_terms(q, query)
-            if is_mixed_script(query) or self._spans_scripts(query, wanted)
-            else q
-        )
+        extra = self._cross_script_terms(q, query, languages=wanted)
+        expanded = q + extra if extra else q
         scores = self._bm25.get_scores(expanded)
         allowed_ids = [
             i

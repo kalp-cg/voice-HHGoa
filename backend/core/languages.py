@@ -118,7 +118,22 @@ def looks_romanized_indic(text: str) -> bool:
 # language by *sound* after speech recognition has written it in some other
 # script, so they are compared in romanised form.
 _SPOKEN_MARKERS: dict[str, tuple[str, ...]] = {
-    "gu": ("ક્યાં", "છે", "શું", "કોણ", "કેમ", "કેટલું", "નથી", "અને"),
+    "gu": (
+        "ક્યાં",
+        "છે",
+        "छे",  # Scribe often writes છે in Devanagari
+        "શું",
+        "કોણ",
+        "કેમ",
+        "કેટલું",
+        "કેટલા",
+        "નથી",
+        "અને",
+        "સુધી",
+        "सुधी",
+        "શકાય",
+        "सकाई",
+    ),
     "hi": ("कहाँ", "कहां", "है", "हैं", "क्या", "कौन", "कैसे", "कितना", "कितने", "नहीं"),
     "mr": ("कुठे", "आहे", "आहेत", "काय", "कोण", "कसे", "नाही"),
     "ne": ("छ", "छन्", "छैन", "कस्तो", "हुन्छ"),

@@ -12,7 +12,9 @@ from backend.core.translit import (
     fuzzy_key,
     is_mixed_script,
     romanize_token,
+    script_base,
     scripts_in,
+    skeleton,
 )
 from backend.retrieval.dedupe import dedupe_hits
 
@@ -26,7 +28,8 @@ _STOP = {
     "who", "how", "when", "which", "does", "do", "did", "can", "you", "me",
     "please", "tell", "located",
     "कहाँ", "कहा", "क्या", "कौन", "कैसे", "क्यों", "है", "हैं", "का", "की", "के",
-    "में", "से", "और", "कुत्र", "अस्ति", "आहे", "कुठे",
+    "में", "से", "और", "ने", "को", "कुत्र", "अस्ति", "आहे", "कुठे",
+    "छे",
     "কোথায়", "কত", "আছে", "একটি", "এবং",
     "எங்கே", "என்ன", "உள்ளது", "ஒரு",
     "ఎక్కడ", "ఉంది", "ఒక",
@@ -55,6 +58,14 @@ def _tokens(text: str) -> set[str]:
     }
 
 
+def _needs_transliteration(token: str, passage_scripts: frozenset[int]) -> bool:
+    """True when `token` might be the same word as a passage word in another script."""
+    if token.isascii():
+        return bool(passage_scripts)
+    base = script_base(token[0]) if token else None
+    return bool(passage_scripts) and base not in passage_scripts
+
+
 def _lexical_score(query: str, text: str, cross_script: bool = False) -> float:
     q = _tokens(query)
     d = _tokens(text)
@@ -64,15 +75,45 @@ def _lexical_score(query: str, text: str, cross_script: bool = False) -> float:
     # Without this, the passage that answers a mixed-script question scores the
     # same zero overlap as every unrelated passage in the same language.
     if cross_script and matched < len(q):
+        passage_scripts = scripts_in(text)
         buckets: dict[str, list[str]] = {}
         for token in d:
             roman = romanize_token(token)
             if roman:
                 buckets.setdefault(fuzzy_key(roman), []).append(roman)
         for token in q - d:
+            if not _needs_transliteration(token, passage_scripts):
+                continue
             target = romanize_token(token)
             if len(target) >= 3 and any_fuzzy_match(target, buckets):
                 matched += 1
+    return matched / len(q)
+
+
+def _skeleton_overlap(query: str, other: str) -> float:
+    q = {
+        skel
+        for token in _tokens(query)
+        if len(skel := skeleton(romanize_token(token))) >= 3
+    }
+    if not q or not other:
+        return 0.0
+    s = {
+        skel
+        for token in _tokens(other)
+        if len(skel := skeleton(romanize_token(token))) >= 3
+    }
+    if not s:
+        return 0.0
+    matched = 0
+    for skel in q:
+        if skel in s or any(
+            (skel.startswith(other_s) or other_s.startswith(skel))
+            and min(len(skel), len(other_s)) >= 4
+            and abs(len(skel) - len(other_s)) <= 3
+            for other_s in s
+        ):
+            matched += 1
     return matched / len(q)
 
 
@@ -116,12 +157,16 @@ def rerank(
             if source_query and query_tokens and query_tokens == source_tokens
             else 0.0
         )
+        related_query_bonus = (
+            0.0 if exact_query_bonus else _skeleton_overlap(query, source_query)
+        )
         score = (
             lex
             + dense_bonus
             + 0.15 * rrf
             + 1.25 * proper_bonus
             + exact_query_bonus
+            + 1.6 * related_query_bonus
         )
         row["rerank_score"] = score
         row["score"] = score

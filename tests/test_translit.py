@@ -58,6 +58,11 @@ def test_unrelated_words_do_not_match() -> None:
         assert not fuzzy_equal("goa", romanize_token(native)), native
 
 
+def test_inflected_native_form_still_matches_the_stem() -> None:
+    assert fuzzy_equal("inda", romanize_token("ઈંડાને"))
+    assert fuzzy_equal(romanize_token("इंडा"), romanize_token("ઈંડા"))
+
+
 def test_short_tokens_never_fuzzy_match() -> None:
     assert not fuzzy_equal("go", "ga")
     assert fuzzy_equal("go", "go")

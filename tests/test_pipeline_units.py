@@ -63,6 +63,24 @@ def test_latin_name_counts_as_covered_by_a_native_script_passage():
     assert confidence >= 0.5
 
 
+def test_mixed_script_transcript_answers_the_paired_source_query():
+    query = "Hard boiled इंडा ने fridge में कितना दिन सुधी रखी जा सकाई छे?"
+    hits = [
+        {
+            "text": (
+                "સામાન્ય રીતે, ઉકાળેલા ઈંડા રેફ્રિજરેટરમાં એક અઠવાડિયું ટકી શકે છે."
+            ),
+            "_source_query": (
+                "હાર્ડ બોઇલ્ડ ઈંડાને ફ્રિજમાં કેટલા દિવસ સુધી રાખી શકાય "
+                "છે તે પહેલાં તે ખરાબ થઈ જાય છે?"
+            ),
+        }
+    ]
+    refuse, confidence, _ = should_refuse(hits, 0.5, query)
+    assert not refuse
+    assert confidence >= 0.4
+
+
 def test_cross_script_coverage_still_refuses_an_unrelated_passage():
     hits = [{"text": "પાણીનું ઉકળવાનું તાપમાન 100 ડિગ્રી સેલ્સિયસ છે."}]
     refuse, _, _ = should_refuse(hits, 0.5, "Goa કયાં છે?")

@@ -160,6 +160,30 @@ def fuzzy_keys(roman: str) -> tuple[str, ...]:
     return tuple(keys)
 
 
+def skeleton(roman: str) -> str:
+    """Consonant skeleton used to look up the same name in another script."""
+    return _skeleton(roman)
+
+
+def related_skeletons(roman: str) -> tuple[str, ...]:
+    """Skeletons that can still be the same name, including a missing final vowel.
+
+    Retrieval indexes natives by skeleton so a query word is an O(1) lookup
+    instead of SequenceMatcher against every word that shares a first letter.
+    """
+    skel = _skeleton(roman)
+    if not skel:
+        return ()
+    keys = [skel]
+    if skel[-1] in _VOWELS:
+        stem = skel[:-1]
+        if stem:
+            keys.append(stem)
+    else:
+        keys.extend(skel + vowel for vowel in "aeiou")
+    return tuple(dict.fromkeys(keys))
+
+
 def is_indic(text: str) -> bool:
     return any(_romanize_char(char) is not None for char in text or "")
 
@@ -185,6 +209,14 @@ def fuzzy_score(left: str, right: str) -> float:
         return 0.0
     if skeleton_left == skeleton_right:
         return 0.95
+    # Inflection: `इंडा` vs `ઈંડાને`, `Goa` vs a declined native form.
+    short_s, long_s = sorted((skeleton_left, skeleton_right), key=len)
+    if (
+        len(short_s) >= 4
+        and long_s.startswith(short_s)
+        and len(long_s) - len(short_s) <= 3
+    ):
+        return 0.88
     # A missing final vowel (Malayalam `gov` vs `goa`) is allowed only when
     # the spellings already share a first letter. Otherwise Gujarati `kov`
     # would count as Goa just because Tamil writes the same name with k.

@@ -227,6 +227,13 @@ def test_spoken_language_recovers_gujarati_written_in_devanagari():
     assert "gu" in retrieval_languages(query, hint="hi")
 
 
+def test_spoken_language_recovers_gujarati_from_mixed_scribe_transcript():
+    # Spoken Gujarati, written as Hindi + English with Devanagari છે/સુધી.
+    query = "Hard boiled इंडा ने fridge में कितना दिन सुधी रखी जा सकाई छे?"
+    assert spoken_language(query) == "gu"
+    assert "gu" in retrieval_languages(query, hint="hi")
+
+
 def test_spoken_language_does_not_override_real_hindi():
     # Pure Hindi stays with script detection; recovery only fires cross-script.
     assert spoken_language("गोवा कहाँ है?") is None

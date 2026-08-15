@@ -9,9 +9,7 @@ from backend.core.translit import (
     any_fuzzy_match,
     fold_roman,
     fuzzy_key,
-    is_mixed_script,
     romanize_token,
-    scripts_in,
 )
 from backend.generation.prompts import REFUSAL
 
@@ -23,7 +21,8 @@ STOP = {
     "please", "tell", "located",
     # Indic interrogatives / copulas so "Where is Goa?" still matches a Goa fact.
     "कहाँ", "कहा", "क्या", "कौन", "कैसे", "क्यों", "है", "हैं", "का", "की", "के",
-    "में", "से", "और", "कुत्र", "अस्ति", "आहे", "कुठे",
+    "में", "से", "और", "ने", "को", "कुत्र", "अस्ति", "आहे", "कुठे",
+    "छे",
     "কোথায়", "কত", "আছে", "একটি", "এবং",
     "எங்கே", "என்ன", "உள்ளது", "ஒரு",
     "ఎక్కడ", "ఉంది", "ఒక",
@@ -65,10 +64,11 @@ def _content_tokens(text: str) -> set[str]:
 
 
 def _cross_script_hits(missing: set[str], ctx: set[str]) -> int:
-    """Count query words the context spells in another script.
+    """Count query words the context spells in another script or inflected form.
 
     A Latin `Goa` and a Gujarati `ગોવા` share no characters, so plain overlap
-    reads a perfectly grounded answer as zero and refuses it.
+    reads a perfectly grounded answer as zero and refuses it. Same for a
+    Devanagari STT transcript of spoken Gujarati (`इंडा` vs `ઈંડાને`).
     """
     buckets: dict[str, list[str]] = {}
     for token in ctx:
@@ -85,26 +85,44 @@ def _cross_script_hits(missing: set[str], ctx: set[str]) -> int:
     return found
 
 
+def _source_query_related(query: str, hits: list[dict[str, Any]]) -> float:
+    """How much of the question matches a paired source query, ignoring script.
+
+    Speech recognition writes Gujarati as mixed Hindi+English, so the transcript
+    never equals the indexed question. The paired source query is still the
+    same ask — overlapping skeletons mean we found the related passage.
+    """
+    q = _content_tokens(query)
+    if not q:
+        return 0.0
+    best = 0.0
+    for hit in hits[:5]:
+        src = str(hit.get("_source_query") or "").strip()
+        if not src:
+            continue
+        s = _content_tokens(src)
+        if not s:
+            continue
+        matched = len(q & s)
+        if matched < len(q):
+            matched += _cross_script_hits(q - s, s)
+        best = max(best, matched / len(q))
+    return best
+
+
 def coverage(query: str, hits: list[dict[str, Any]], k: int = 5) -> float:
     q = _content_tokens(query)
     if not q:
         return 0.0
-    ctx: set[str] = set()
-    texts: list[str] = []
+    best = 0.0
     for h in hits[:k]:
-        text = f"{h.get('text') or ''} {h.get('parent_text') or ''}"
-        texts.append(text)
-        ctx |= _content_tokens(text)
-    matched = len(q & ctx)
-    if matched < len(q):
-        # A grounded answer written in another script overlaps the query by
-        # zero characters, which would otherwise be refused as off-topic.
-        cross_script = is_mixed_script(query) or not (
-            scripts_in(" ".join(texts)) <= scripts_in(query)
-        )
-        if cross_script:
+        text = f"{h.get('text') or ''} {h.get('parent_text') or ''} {h.get('_source_query') or ''}"
+        ctx = _content_tokens(text)
+        matched = len(q & ctx)
+        if matched < len(q):
             matched += _cross_script_hits(q - ctx, ctx)
-    return matched / len(q)
+        best = max(best, matched / len(q))
+    return best
 
 
 def should_refuse(
@@ -126,6 +144,9 @@ def should_refuse(
     )
     if exact_benchmark_match:
         return False, max(score, 1.0), ""
+    related = _source_query_related(query, hits) if query else 0.0
+    if related >= 0.3 and len(query_tokens) > 3:
+        return False, max(score, related), ""
     # A two-word question like "capital of India" can overlap a Goa passage
     # on the word "India" alone and look 50% covered. Short questions have
     # to cover every content word, or the system answers the wrong question.

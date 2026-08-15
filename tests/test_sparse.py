@@ -83,3 +83,21 @@ def test_single_script_queries_skip_cross_script_expansion():
     """Expansion is recall-only, so it must not disturb same-script ranking."""
     hits = _gujarati_index().search("ઉકળવાનું તાપમાન")
     assert hits[0]["chunk_id"] == "boiling"
+
+
+def test_mixed_indic_query_only_expands_the_latin_name():
+    extra = _gujarati_index()._cross_script_terms(
+        ["goa", "કયાં", "છે"],
+        "Goa કયાં છે?",
+        languages={"gu"},
+    )
+    assert extra == ["ગોવા"]
+
+
+def test_same_script_content_words_are_not_expanded():
+    extra = _gujarati_index()._cross_script_terms(
+        ["प्रत्येक", "राज्य", "प्रतिनिधित्व", "आधार"],
+        "प्रत्येक राज्य को प्रतिनिधित्व किस आधार पर होता है?",
+        languages={"hi"},
+    )
+    assert extra == []
