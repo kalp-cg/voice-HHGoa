@@ -310,13 +310,14 @@ async function ask(query) {
     }
     const data = await res.json();
     answerEl.textContent = data.answer || "—";
-    // Show the language retrieval actually used (script of the transcript),
-    // not Scribe's spoken-language guess. Short English questions often get
-    // mis-tagged as Hindi/Marathi while the answer stays correct.
+    // Prefer the language of the passage that actually answered. Auto-detect
+    // recovery can leave several candidates on the query, and showing that
+    // list looks like the system could not decide.
+    const sourceLang = String(data.sources?.[0]?.language || "").trim();
     const resolvedLang = String(data.query_language || "en").trim() || "en";
-    const displayLang = sttLanguage || resolvedLang;
-    responseLanguage =
-      data.sources?.[0]?.language || resolvedLang.split(",")[0] || "en";
+    const displayLang =
+      sttLanguage || sourceLang || resolvedLang.split(",")[0] || "en";
+    responseLanguage = sourceLang || resolvedLang.split(",")[0] || "en";
     const flags = [
       `lang ${displayLang}${sttLanguage ? " (forced)" : " (auto)"}`,
       data.grounded ? "grounded" : "not grounded",

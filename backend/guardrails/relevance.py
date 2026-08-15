@@ -126,6 +126,10 @@ def should_refuse(
     )
     if exact_benchmark_match:
         return False, max(score, 1.0), ""
-    if not hits or score < threshold:
+    # A two-word question like "capital of India" can overlap a Goa passage
+    # on the word "India" alone and look 50% covered. Short questions have
+    # to cover every content word, or the system answers the wrong question.
+    needed = 1.0 if len(query_tokens) <= 3 else threshold
+    if not hits or score < needed:
         return True, score, REFUSAL
     return False, score, ""

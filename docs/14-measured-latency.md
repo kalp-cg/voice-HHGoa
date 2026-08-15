@@ -27,8 +27,8 @@ Adversarial refusal rate: **1.0**
 Latest Recall@5: 0.328 · MRR: 0.265
 
 The memory-capped sparse deployment is evaluated separately over its balanced
-sample: **210/210 paired queries grounded**, with **209/210 same-language top
-hits**. Reproduce with `scripts/evaluate_sparse_sample.py`.
+sample: **1,315/1,315 paired queries grounded**, with **1,314/1,315 same-language
+top hits**. Reproduce with `scripts/evaluate_sparse_sample.py`.
 
 Assignment target is **&lt;200 ms** for retrieval → answer. Both measured P100s meet it.
 

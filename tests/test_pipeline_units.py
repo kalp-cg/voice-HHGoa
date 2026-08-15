@@ -69,7 +69,10 @@ def test_cross_script_coverage_still_refuses_an_unrelated_passage():
     assert refuse
 
 
-def test_offtopic_rule_wins_over_source_query_metadata():
+def test_short_query_does_not_answer_from_a_partial_overlap():
+    hits = [{"text": "Goa is a state on the southwestern coast of India."}]
+    refuse, _, _ = should_refuse(hits, 0.5, "What is the capital of India?")
+    assert refuse
     query = "What is the weather in Goa today?"
     hits = [{"text": "Goa is a state.", "_source_query": query}]
     refuse, _, _ = should_refuse(hits, 0.2, query)

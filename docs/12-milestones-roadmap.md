@@ -8,7 +8,7 @@ Build **one milestone at a time**. Do not combine unrelated layers in a single C
 
 **Steps 1–21 complete.** Step 20 is a capped streamed scale-up from MSMARCO-XI
 train, not a 55.6 GB download. Live demo: https://voice-hhgoa.onrender.com.
-The memory-capped live index has 210 balanced records / 300 chunks across 15
+The memory-capped live index has 1,315 balanced records / 2,171 chunks across 15
 languages; the local full-hybrid index has 10,005 records / 11,627 chunks.
 Only videos, social posts, and the final form (step 22) require the user.
 

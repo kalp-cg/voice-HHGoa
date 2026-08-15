@@ -15,7 +15,7 @@ services:
       - key: RETRIEVAL_MODE
         value: sparse
       - key: SKIP_STARTUP_WARMUP
-        value: "1"
+        value: "0"
       - key: DATASET_RECORDS
         value: "1315"
       - key: DATASET_CHUNKS

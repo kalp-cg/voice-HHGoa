@@ -37,16 +37,28 @@ def client():
         yield test_client
 
 
-def test_health_reports_index(client):
+def _health(client):
     res = client.get("/health")
     assert res.status_code == 200
-    body = res.json()
+    return res.json()
+
+
+def _is_sparse(client) -> bool:
+    return (_health(client).get("retrieval_mode") or "").strip().lower() == "sparse"
+
+
+def test_health_reports_index(client):
+    body = _health(client)
     assert body["index_ready"] is True
     assert body["index_points"] > 0
     assert body["default_mode"] == "fast"
 
 
 def test_known_query_is_grounded(client):
+    # The memory-capped live index does not contain the capital-of-India
+    # passage; that fact lives in the local hybrid index.
+    if _is_sparse(client):
+        pytest.skip("capital-of-India is not in the sparse deploy sample")
     res = client.post("/api/query", json={"query": "What is the capital of India?"})
     assert res.status_code == 200
     body = res.json()
@@ -81,6 +93,19 @@ def test_unsafe_is_refused(client):
 
 
 def test_hybrid_retrieve_returns_hits(client):
+    if _is_sparse(client):
+        res = client.post(
+            "/api/retrieve/hybrid",
+            json={"query": "Where is Goa located?", "top_k": 5},
+        )
+        assert res.status_code == 501
+        res = client.post(
+            "/api/retrieve/sparse",
+            json={"query": "Where is Goa located?", "top_k": 5},
+        )
+        assert res.status_code == 200
+        assert len(res.json()["hits"]) >= 1
+        return
     res = client.post(
         "/api/retrieve/hybrid",
         json={"query": "What is MS MARCO used for?", "top_k": 5},

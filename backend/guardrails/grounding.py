@@ -7,7 +7,7 @@ from typing import Any
 
 from backend.generation.prompts import REFUSAL
 
-_TOKEN = re.compile(r"[\w\u0900-\u097F]+", re.UNICODE)
+_TOKEN = re.compile(r"[\w\u0900-\u0D7F\u0600-\u06FF]+", re.UNICODE)
 
 STOP = {
     "the",

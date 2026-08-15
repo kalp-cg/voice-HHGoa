@@ -9,8 +9,8 @@ Use the permanent demo: **https://voice-hhgoa.onrender.com**
 - The live Render deployment is intentionally **BM25/sparse + rerank** because
   the free instance has 512 MB RAM.
 - The full local system uses **dense + BM25 + RRF + rerank**.
-- Currently deployed corpus: **210 records / 300 chunks / 15 languages**.
-- Expanded corpus ready for the next deploy: **1,315 records / 2,171 chunks /
+- Currently deployed corpus: **1,315 records / 2,171 chunks / 15 languages**.
+- Expanded corpus is what is deployed: **1,315 records / 2,171 chunks /
   15 languages**. It passed 1,315/1,315 paired queries at 123 MB container
   memory; warm sparse P50/P70/P100 were 3.4/3.9/16.5 ms.
 - Current local hybrid corpus: **10,005 records / ~12k chunks**, almost all Hindi.
@@ -29,9 +29,9 @@ Local sparse fallback (same corpus as Render):
 
 ```bash
 source .venv/bin/activate
-export QDRANT_PATH=qdrant_storage/deploy-eval
+export QDRANT_PATH=qdrant_storage/deploy-expanded-v2
 export RETRIEVAL_MODE=sparse
-export SKIP_STARTUP_WARMUP=1
+export SKIP_STARTUP_WARMUP=0
 export DEFAULT_ANSWER_MODE=fast
 uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
@@ -74,7 +74,8 @@ hardest for any recogniser to place.
 
 1. Open the live URL 1–2 minutes early so the free Render service wakes up.
 2. Confirm the page says the index is ready.
-3. Leave **Language** on **Auto-detect (recommended)**.
+3. Leave **Language** on **Auto-detect**. Pick a language only if the
+   transcript is written in the wrong script.
 4. Allow microphone permission.
 5. Ask one short question at a time and wait for the final transcript.
 6. Confirm the answer shows **grounded**, at least one source, and a language

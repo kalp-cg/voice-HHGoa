@@ -11,6 +11,7 @@ from backend.core.languages import (
     reset_language_classifier,
     retrieval_languages,
     resolve_languages,
+    spoken_language,
     train_language_classifier,
 )
 from backend.retrieval.sparse import BM25Index, SparseDoc
@@ -216,3 +217,16 @@ def test_language_filter_falls_back_when_index_lacks_the_language():
     ]
     hits = BM25Index(docs).search("Where is Goa located?", languages={"hi"})
     assert hits and hits[0]["chunk_id"] == "a"
+
+
+def test_spoken_language_recovers_gujarati_written_in_devanagari():
+    # Scribe often writes spoken Gujarati in Devanagari and labels it Hindi.
+    query = "गोवा क्यां छे?"
+    assert spoken_language(query) == "gu"
+    assert "gu" in resolve_languages(query, hint="hi")
+    assert "gu" in retrieval_languages(query, hint="hi")
+
+
+def test_spoken_language_does_not_override_real_hindi():
+    assert spoken_language("गोवा कहाँ है?") == "hi"
+    assert resolve_languages("गोवा कहाँ है?", hint="hi") == {"hi"}

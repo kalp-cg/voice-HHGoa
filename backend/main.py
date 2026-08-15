@@ -23,7 +23,7 @@ async def lifespan(_app: FastAPI):
         try:
             from backend.orchestration.pipeline import run_pipeline
 
-            run_pipeline("What is the capital of India?", mode="fast")
+            run_pipeline("Where is Goa located?", mode="fast")
         except Exception:
             pass
     yield
