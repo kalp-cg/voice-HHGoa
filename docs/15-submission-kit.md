@@ -12,8 +12,8 @@ Verified live on 2026-08-15:
 
 | Check | Result |
 |---|---|
-| `/health` | `status: ok`, `index_points: 2171`, `retrieval_mode: sparse` |
-| Balanced sparse evaluation | 1,315/1,315 paired queries grounded; 1,314/1,315 same-language top hit |
+| `/health` | `status: ok`, `index_points: 3432`, `retrieval_mode: sparse` |
+| Balanced sparse evaluation | 1,965/1,965 paired queries grounded; 1,965/1,965 same-language top hit |
 | English query | grounded answer |
 | Hindi query (`गोवा कहाँ है?`) | grounded Hindi answer |
 | Mixed-script Gujarati (`Goa ક્યાં છે?`) | grounded Gujarati answer |
@@ -24,8 +24,8 @@ Verified live on 2026-08-15:
 
 Render Free caps RAM at 512 MB, which the FastEmbed ONNX model alone exceeds.
 The deployed image therefore runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
-guardrails over a balanced 1,315-record / 2,171-chunk index baked at Docker build
-time (123 MB peak RSS in the local sparse API check). It contains official small IndicMSMARCO benchmark rows
+guardrails over a balanced 1,965-record / 3,432-chunk index baked at Docker build
+time (~52 MB BM25 RSS in the local sparse API check). It contains official small IndicMSMARCO benchmark rows
 plus the curated Goa fact in every supported language.
 `/api/retrieve/dense` and `/api/retrieve/hybrid` return 501 on Free. Full hybrid
 retrieval runs locally and on any host with ≥2 GB RAM.
@@ -80,8 +80,8 @@ capped to fit the target hardware, with measured scale-up checkpoints.
 3. Ask by voice: “Where is Goa located?” Leave **Language** on *Auto-detect*.
 4. Ask the same question in Hindi / Gujarati / Tamil. If Scribe writes the wrong
    script, the backend still recovers from the words themselves. The badge under
-   the answer shows `lang xx (auto)`. The live source sample is 1,315 records /
-   2,171 chunks, not the 55.6 GB dump.
+   the answer shows `lang xx (auto)`. The live source sample is 1,965 records /
+   3,432 chunks, not the 55.6 GB dump.
 5. Show transcript, grounded answer, source passages, and stage latency.
 6. Ask: “What is the weather in Goa today?” and show refusal.
 7. Ask an unsafe query and show the safety refusal.
@@ -109,7 +109,7 @@ Every post must include `#RAGInGoa`.
 
 - [x] Public GitHub link opens in an incognito window
 - [x] Public demo URL opens over HTTPS (https://voice-hhgoa.onrender.com) and the STT token endpoint returns 200
-- [x] Live corpus contains 2,171 balanced multilingual chunks and passes the paired-query evaluation
+- [x] Live corpus contains 3,432 balanced multilingual chunks and passes the paired-query evaluation
 - [ ] Video 1 is approximately 90 seconds and shows process
 - [ ] Video 2 demonstrates voice → transcript → answer end to end
 - [ ] Every team member posted both videos on all three platforms

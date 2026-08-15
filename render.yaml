@@ -17,9 +17,9 @@ services:
       - key: SKIP_STARTUP_WARMUP
         value: "0"
       - key: DATASET_RECORDS
-        value: "1315"
+        value: "1965"
       - key: DATASET_CHUNKS
-        value: "2171"
+        value: "3432"
       - key: OMP_NUM_THREADS
         value: "1"
       - key: MALLOC_ARENA_MAX

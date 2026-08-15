@@ -215,7 +215,18 @@ def goa_records() -> list[dict]:
     return rows
 
 
-def corpus_records(parquet_root: Path, per_lang: int) -> list[dict]:
+def corpus_records(
+    parquet_root: Path,
+    per_lang: int,
+    *,
+    prefer_long: bool = True,
+    long_min_chars: int = 40,
+) -> list[dict]:
+    """Take up to `per_lang` quality rows per language.
+
+    When `prefer_long` is set, longer questions are kept first so the live demo
+    has more multi-clause spoken queries, not only the short Goa fact.
+    """
     rows: list[dict] = []
     query_id = 9100
     for lang in LANGS:
@@ -223,7 +234,7 @@ def corpus_records(parquet_root: Path, per_lang: int) -> list[dict]:
             continue
         path = parquet_root / lang / "train-00000-of-00001.parquet"
         table = pq.read_table(path)
-        taken = 0
+        candidates: list[dict] = []
         for raw in table.to_pylist():
             query = (raw.get("query") or "").strip()
             passage = (raw.get("passage") or "").strip()
@@ -242,26 +253,40 @@ def corpus_records(parquet_root: Path, per_lang: int) -> list[dict]:
                 continue
             if not _answer_supported_by_passage(answer, passage):
                 continue
+            candidates.append(
+                {
+                    "query": query,
+                    "passage": passage,
+                    "answer": answer,
+                    "query_type": str(raw.get("query_type") or "DESCRIPTION"),
+                    "language": lang,
+                }
+            )
+        if prefer_long:
+            candidates.sort(
+                key=lambda item: (
+                    0 if len(item["query"]) >= long_min_chars else 1,
+                    -len(item["query"]),
+                )
+            )
+        for item in candidates[:per_lang]:
             query_id += 1
             rows.append(
                 {
                     "query_id": query_id,
-                    "query": query,
+                    "query": item["query"],
                     "eng_query": "",
-                    "answer": answer,
+                    "answer": item["answer"],
                     "eng_answer": "",
-                    "query_type": str(raw.get("query_type") or "DESCRIPTION"),
+                    "query_type": item["query_type"],
                     "source_lang": "eng_Latn",
                     "target_lang": lang,
                     "language": lang,
                     "english_passages": [],
-                    "translated_passages": [passage],
+                    "translated_passages": [item["passage"]],
                     "is_selected": [1],
                 }
             )
-            taken += 1
-            if taken >= per_lang:
-                break
     return rows
 
 
@@ -283,25 +308,49 @@ def main() -> None:
         type=Path,
         default=ROOT / "data/samples/deploy_msmarco_multilingual.jsonl",
     )
+    parser.add_argument(
+        "--prefer-long",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Prefer longer questions when filling each language quota.",
+    )
+    parser.add_argument(
+        "--long-min-chars",
+        type=int,
+        default=40,
+        help="Character length treated as a long question when preferring long rows.",
+    )
     args = parser.parse_args()
 
     rows = goa_records()
     if args.per_lang > 0:
-        rows += corpus_records(args.parquet_root, args.per_lang)
+        rows += corpus_records(
+            args.parquet_root,
+            args.per_lang,
+            prefer_long=args.prefer_long,
+            long_min_chars=args.long_min_chars,
+        )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     counts: dict[str, int] = {}
+    long_counts: dict[str, int] = {}
     for row in rows:
-        counts[row["language"]] = counts.get(row["language"], 0) + 1
+        lang = row["language"]
+        counts[lang] = counts.get(lang, 0) + 1
+        if len(str(row.get("query") or "")) >= args.long_min_chars:
+            long_counts[lang] = long_counts.get(lang, 0) + 1
     print(
         json.dumps(
             {
                 "output": str(args.out),
                 "records": len(rows),
+                "long_questions": sum(long_counts.values()),
+                "long_min_chars": args.long_min_chars,
                 "languages": counts,
+                "long_by_language": long_counts,
             },
             ensure_ascii=False,
             indent=2,

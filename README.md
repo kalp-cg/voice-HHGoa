@@ -125,8 +125,8 @@ Live: https://voice-hhgoa.onrender.com
 
 Render Free gives 512 MB RAM, which is not enough to hold the FastEmbed ONNX
 model, so the deployed image runs `RETRIEVAL_MODE=sparse`: BM25 + rerank +
-guardrails over a balanced 2,171-chunk / 15-language index baked at build time
-(123 MB container memory in the local deployment check). Dense
+guardrails over a balanced 3,432-chunk / 15-language index baked at build time
+(≈50–130 MB sparse BM25 memory in local checks). Dense
 and hybrid endpoints return 501 there and answer normally on any host with
 ≥2 GB RAM. Local runs stay full hybrid.
 
@@ -181,19 +181,33 @@ coast in the Konkan region (Maharashtra / Karnataka / Arabian Sea).
 
 ### Extra short / long (live corpus also has these)
 
+The expanded live sample prefers **long questions** (~1,900 of 1,965 rows are
+40+ characters). Use these for Video 2 after the Goa fact.
+
 Short:
 
-- ઘઉંનું ઘાસ શું છે?
-- મચ્છર કયા રોગો ફેલાવે છે?
+- હાર્ડ બોઇલ્ડ ઈંડાને ફ્રિજમાં કેટલા દિવસ સુધી રાખી શકાય?
 - ड्रॉपबियर क्या है?
 - कोशिका में क्या होता है?
 
-Long:
+Long (Gujarati):
 
-- આવર્ત કોષ્ટકનો વિકાસ કરવામાં મદદ કરનારા બે વૈજ્ઞાનિકોના નામ આપો.
-- ફોરેન્સિક ટોક્સિકોલોજિસ્ટ બનવા માટેની જરૂરિયાતો શું છે?
-- सैल्मन बेक करने के लिए सही तापमान और समय क्या है?
-- दांत प्रत्यारोपण की औसत लागत कितनी होती है?
+- જ્યારે તમે નોકરીનું અરજી ફોર્મ ભરો છો અને તેમાં વેતન પૂછવામાં આવે છે, ત્યારે તેનો શું અર્થ થાય છે?
+- હાર્ડ બોઇલ્ડ ઈંડાને ફ્રિજમાં કેટલા દિવસ સુધી રાખી શકાય છે તે પહેલાં તે ખરાબ થઈ જાય છે?
+- શું વીમા કંપની તમને ચૂકવે છે જ્યારે તમારી વીમા કંપનીને દારૂ પીધેલા ડ્રાઇવરને ચૂકવવું પડે છે?
+
+Long (Hindi):
+
+- प्रत्येक राज्य को कितने प्रतिनिधियों की गारंटी दी जाती है, प्रतिनिधित्व किस आधार पर होता है?
+- कैलिफ़ोर्निया में एक दुर्भावनापूर्ण अपराध (फ़ेलनी) की सजा आपके रिकॉर्ड पर कितने समय तक रहती है?
+- क्या बीमा कंपनी तब भुगतान करती है जब आपकी बीमा कंपनी को शराबी ड्राइवर को भुगतान करना पड़ता है?
+
+Long (Marathi / Tamil / Malayalam — pick one more language for the video):
+
+- प्रत्येक राज्याला किती प्रतिनिधी मिळतात याची हमी दिली जाते, प्रतिनिधित्व कशावर आधारित आहे?
+- क्रेडिट मर्यादा वाढण्याची नाकारलेली विनंती तुमच्या क्रेडिटवर परिणाम करेल का?
+- ஒவ்வொரு மாநிலத்திற்கும் எத்தனை பிரதிநிதிகள் உறுதி செய்யப்படுகிறார்கள்? பிரதிநிதித்துவம் எதை அடிப்படையாகக் கொண்டது?
+- ക്രെഡിറ്റ് പരിധി വർദ്ധനവിനുള്ള അഭ്യർത്ഥന നിരസിക്കപ്പെട്ടാൽ അത് നിങ്ങളുടെ ക്രെഡിറ്റ് സ്കോറിനെ ബാധിക്കുമോ?
 
 ### Do **not** ask on the live demo
 

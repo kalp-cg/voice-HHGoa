@@ -9,10 +9,9 @@ Use the permanent demo: **https://voice-hhgoa.onrender.com**
 - The live Render deployment is intentionally **BM25/sparse + rerank** because
   the free instance has 512 MB RAM.
 - The full local system uses **dense + BM25 + RRF + rerank**.
-- Currently deployed corpus: **1,315 records / 2,171 chunks / 15 languages**.
-- Expanded corpus is what is deployed: **1,315 records / 2,171 chunks /
-  15 languages**. It passed 1,315/1,315 paired queries at 123 MB container
-  memory; warm sparse P50/P70/P100 were 3.4/3.9/16.5 ms.
+- Currently deployed corpus: **1,965 records / 3,432 chunks / 15 languages**
+  (long-question preferred sample; 1,965/1,965 paired queries grounded).
+- Warm sparse index load ≈ **52 MB** BM25 RSS in the local check.
 - Current local hybrid corpus: **10,005 records / ~12k chunks**, almost all Hindi.
 - MSMARCO-XI is about **55.6 GB**, but it was streamed with a cap. Do not say
   that all of it, 250 million records, or 250 MB is loaded into the live app.

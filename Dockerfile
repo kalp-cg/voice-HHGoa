@@ -29,8 +29,8 @@ COPY data/samples/deploy_msmarco_multilingual.jsonl data/samples/deploy_msmarco_
 RUN python scripts/build_sparse_deploy_index.py \
       --input-jsonl data/samples/deploy_msmarco_multilingual.jsonl \
       --no-bootstrap \
-      --records 1315 \
-      --max-chunks 2200 \
+      --records 1965 \
+      --max-chunks 3500 \
       --record-batch 64 \
       --output qdrant_storage/deploy/chunks.jsonl \
     && chmod +x scripts/deploy_start.sh

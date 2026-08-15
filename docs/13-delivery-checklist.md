@@ -41,8 +41,8 @@
 ## Verified deployment profile
 
 - [x] Render Free stays within 512 MB using BM25-only retrieval
-- [x] Balanced live sample: 1,315 records → 2,171 chunks across 15 languages
-- [x] Paired-query sparse evaluation: 1,315/1,315 grounded answers
+- [x] Balanced live sample: 1,965 records → 3,432 chunks across 15 languages
+- [x] Paired-query sparse evaluation: 1,965/1,965 grounded answers
 - [x] Automatic-language demo check: 15/15 Goa questions
 - [x] Local full hybrid remains available on hardware with ≥2 GB RAM
 
