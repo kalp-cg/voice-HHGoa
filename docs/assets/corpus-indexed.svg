@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="340" viewBox="0 0 920 340" role="img" aria-label="Indexed corpus vs dump">
+  <title>Indexed corpus vs dump</title>
+  <rect width="920" height="340" rx="16" fill="#07140f"/>
+  
+  <text x="24" y="36" fill="#3dff8a" font-family="ui-sans-serif,system-ui,sans-serif" font-size="18" font-weight="700">What is actually indexed</text>
+  <text x="24" y="56" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Solid = records · faded = chunks · hover bars</text>
+  
+  <text x="24" y="108" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">Live demo</text>
+  <rect x="280" y="90" width="94.3" height="16" rx="6" fill="#3dff8a">
+    <title>Live demo: 1,965 records · 3,432 chunks</title>
+  </rect>
+  <rect x="280" y="112" width="137.3" height="16" rx="6" fill="#3dff8a" opacity="0.55"/>
+  <text x="780" y="112" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">1,965 records · 3,432 chunks</text>
+  <text x="24" y="178" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">Local hybrid</text>
+  <rect x="280" y="160" width="480.0" height="16" rx="6" fill="#2ec4b6">
+    <title>Local hybrid: 10,005 records · 12,000 chunks</title>
+  </rect>
+  <rect x="280" y="182" width="480.0" height="16" rx="6" fill="#2ec4b6" opacity="0.55"/>
+  <text x="780" y="182" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">10,005 records · 12,000 chunks</text>
+  <text x="24" y="248" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">We do not index the dump</text>
+  <rect x="280" y="230" width="0.0" height="16" rx="6" fill="#ff6b6b">
+    <title>We do not index the dump: not downloaded</title>
+  </rect>
+  <rect x="280" y="252" width="0.0" height="16" rx="6" fill="#ff6b6b" opacity="0.55"/>
+  <text x="780" y="252" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">not downloaded</text>
+  <text x="24" y="318" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Live: 15 languages, BM25-only. Local: dense + BM25 hybrid, mostly Hindi 10k sample.</text>
+
+</svg>

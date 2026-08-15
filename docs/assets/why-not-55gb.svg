@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="420" viewBox="0 0 920 420" role="img" aria-label="Why we did not load 55.6 GB">
+  <title>Why we did not load 55.6 GB</title>
+  <rect width="920" height="420" rx="16" fill="#07140f"/>
+  
+  <text x="24" y="36" fill="#3dff8a" font-family="ui-sans-serif,system-ui,sans-serif" font-size="18" font-weight="700">Why we did not load 55.6 GB</text>
+  <text x="24" y="56" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Hover a bar. Scale is logarithmic so the live index is still visible.</text>
+  
+  <text x="24" y="100" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">MSMARCO-XI full dump</text>
+  <rect x="280" y="72" width="560.0" height="44" rx="8" fill="#ff6b6b">
+    <title>MSMARCO-XI full dump: 55.6 GB — would not fit in RAM</title>
+  </rect>
+  <text x="850.0" y="100" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">55.6 GB</text>
+  <text x="24" y="162" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">10M embeddings (example)</text>
+  <rect x="280" y="134" width="494.2" height="44" rx="8" fill="#ffb020">
+    <title>10M embeddings (example): 15.4 GB — vectors only, no index</title>
+  </rect>
+  <text x="784.2" y="162" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">15.4 GB</text>
+  <text x="24" y="224" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">Laptop RAM</text>
+  <rect x="280" y="196" width="496.2" height="44" rx="8" fill="#7aa2ff">
+    <title>Laptop RAM: 16.0 GB — hard ceiling</title>
+  </rect>
+  <text x="786.2" y="224" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">16 GB</text>
+  <text x="24" y="286" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">Render Free RAM</text>
+  <rect x="280" y="258" width="319.7" height="44" rx="8" fill="#2ec4b6">
+    <title>Render Free RAM: 0.512 GB — live host</title>
+  </rect>
+  <text x="609.7" y="286" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">0.512 GB</text>
+  <text x="24" y="348" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="15">Live BM25 index</text>
+  <rect x="280" y="320" width="202.5" height="44" rx="8" fill="#3dff8a">
+    <title>Live BM25 index: 0.052 GB — what the demo loads</title>
+  </rect>
+  <text x="492.5" y="348" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">0.052 GB</text>
+  <text x="24" y="400" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">16 GB RAM cannot hold 55.6 GB. Render Free is 512 MB. We stream + cap instead.</text>
+
+</svg>

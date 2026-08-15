@@ -1,8 +1,7 @@
 .env
 SPEAKING_SCRIPT.md
 .cache/
-.cursor/*
-!.cursor/rules/
+.cursor/
 __pycache__/
 .venv/
 evaluation/results/

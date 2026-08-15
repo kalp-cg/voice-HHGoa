@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="380" viewBox="0 0 920 380" role="img" aria-label="Warm hybrid RAG P50 latency">
+  <title>Warm hybrid RAG P50 latency</title>
+  <rect width="920" height="380" rx="16" fill="#07140f"/>
+  
+  <text x="24" y="36" fill="#3dff8a" font-family="ui-sans-serif,system-ui,sans-serif" font-size="18" font-weight="700">Warm hybrid RAG — P50 milliseconds</text>
+  <text x="24" y="56" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">N=190 queries · extractive path · STT is not in these bars · hover for detail</text>
+  <line x1="50" y1="320" x2="880" y2="320" stroke="#0e241b" stroke-width="2"/>
+  
+  <rect x="70" y="293.4" width="72" height="26.6" rx="8" fill="#2ec4b6">
+    <title>Embed P50: 11.1 ms (STT excluded)</title>
+  </rect>
+  <text x="106" y="285.4" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">11.1</text>
+  <text x="106" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Embed</text>
+  <rect x="180" y="237.4" width="72" height="82.6" rx="8" fill="#2ec4b6">
+    <title>Dense P50: 34.4 ms (STT excluded)</title>
+  </rect>
+  <text x="216" y="229.4" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">34.4</text>
+  <text x="216" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Dense</text>
+  <rect x="290" y="238.2" width="72" height="81.8" rx="8" fill="#2ec4b6">
+    <title>BM25 P50: 34.1 ms (STT excluded)</title>
+  </rect>
+  <text x="326" y="230.2" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">34.1</text>
+  <text x="326" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">BM25</text>
+  <rect x="400" y="316.0" width="72" height="4.0" rx="8" fill="#2ec4b6">
+    <title>Fusion P50: 0.1 ms (STT excluded)</title>
+  </rect>
+  <text x="436" y="308.0" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">0.1</text>
+  <text x="436" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Fusion</text>
+  <rect x="510" y="316.0" width="72" height="4.0" rx="8" fill="#2ec4b6">
+    <title>Rerank P50: 0.9 ms (STT excluded)</title>
+  </rect>
+  <text x="546" y="308.0" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">0.9</text>
+  <text x="546" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Rerank</text>
+  <rect x="620" y="316.0" width="72" height="4.0" rx="8" fill="#2ec4b6">
+    <title>Generate P50: 0.0 ms (STT excluded)</title>
+  </rect>
+  <text x="656" y="308.0" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">0.0</text>
+  <text x="656" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Generate</text>
+  <rect x="730" y="96.3" width="72" height="223.7" rx="8" fill="#3dff8a">
+    <title>Total RAG P50: 93.2 ms (STT excluded)</title>
+  </rect>
+  <text x="766" y="88.3" text-anchor="middle" fill="#e8f6ee" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13">93.2</text>
+  <text x="766" y="342" text-anchor="middle" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">Total RAG</text>
+  <text x="24" y="362" fill="#8fb8a4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12">P70 118.7 ms · P100 175.5 ms · assignment target RAG &lt; 200 ms</text>
+
+</svg>
