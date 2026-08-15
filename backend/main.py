@@ -23,7 +23,13 @@ async def lifespan(_app: FastAPI):
         try:
             from backend.orchestration.pipeline import run_pipeline
 
+            # Warms the BM25 index, language classifier, and romanised vocab so
+            # the first user question is not the cold one shown on camera.
             run_pipeline("Where is Goa located?", mode="fast")
+            run_pipeline(
+                "कैलिफ़ोर्निया में एक दुर्भावनापूर्ण अपराध की सजा आपके रिकॉर्ड पर कितने समय तक रहती है?",
+                mode="fast",
+            )
         except Exception:
             pass
     yield

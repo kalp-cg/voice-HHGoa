@@ -76,15 +76,16 @@ def run_pipeline(
     if mode not in ("fast", "generative"):
         mode = "fast"
 
-    timer = StageTimer()
     request_id = uuid.uuid4().hex[:12]
     query = (query or "").strip()
     retrieval_mode = (settings.retrieval_mode or "hybrid").strip().lower()
     if retrieval_mode not in ("hybrid", "sparse"):
         retrieval_mode = "hybrid"
-    # Nothing is selected by hand in the normal flow: the query's own script,
-    # optionally narrowed by the language speech recognition reported, decides.
+    # One-off index prep (language model + romanised vocab) must not land on the
+    # measured path. Warmup at process start covers the live demo; tests that
+    # skip warmup still pay once, before the timer starts.
     _prepare_index(settings.qdrant_path)
+    timer = StageTimer()
     languages = resolve_languages(query, forced=language, hint=language_hint)
     search_languages = retrieval_languages(
         query,

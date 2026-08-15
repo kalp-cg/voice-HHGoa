@@ -228,5 +228,17 @@ def test_spoken_language_recovers_gujarati_written_in_devanagari():
 
 
 def test_spoken_language_does_not_override_real_hindi():
-    assert spoken_language("गोवा कहाँ है?") == "hi"
+    # Pure Hindi stays with script detection; recovery only fires cross-script.
+    assert spoken_language("गोवा कहाँ है?") is None
     assert resolve_languages("गोवा कहाँ है?", hint="hi") == {"hi"}
+
+
+def test_long_hindi_query_does_not_pull_in_punjabi():
+    # Folded `है`/`की` used to look like Punjabi and force a cross-script
+    # BM25 expansion that pushed warm RAG past a second.
+    query = (
+        "कैलिफ़ोर्निया में एक दुर्भावनापूर्ण अपराध (फ़ेलनी) की सजा "
+        "आपके रिकॉर्ड पर कितने समय तक रहती है?"
+    )
+    assert spoken_language(query) is None
+    assert "pa" not in retrieval_languages(query)

@@ -105,6 +105,11 @@ class BM25Index:
                     if roman in seen:
                         continue
                     seen.add(roman)
+                    # Same-name spellings stay within ~2× length; this rejects
+                    # most of a large bucket before fuzzy scoring runs.
+                    shorter, longer = sorted((len(roman_word), len(roman)))
+                    if longer > 2 * shorter or abs(len(roman_word) - len(roman)) > 3:
+                        continue
                     closeness = fuzzy_score(roman_word, roman)
                     if closeness <= 0.0:
                         continue

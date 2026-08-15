@@ -119,7 +119,7 @@ def looks_romanized_indic(text: str) -> bool:
 # script, so they are compared in romanised form.
 _SPOKEN_MARKERS: dict[str, tuple[str, ...]] = {
     "gu": ("ક્યાં", "છે", "શું", "કોણ", "કેમ", "કેટલું", "નથી", "અને"),
-    "hi": ("कहाँ", "कहां", "है", "हैं", "क्या", "कौन", "कैसे", "कितना", "नहीं"),
+    "hi": ("कहाँ", "कहां", "है", "हैं", "क्या", "कौन", "कैसे", "कितना", "कितने", "नहीं"),
     "mr": ("कुठे", "आहे", "आहेत", "काय", "कोण", "कसे", "नाही"),
     "ne": ("छ", "छन्", "छैन", "कस्तो", "हुन्छ"),
     "sa": ("अस्ति", "कुत्र", "किम्", "कथम्", "भवति"),
@@ -133,6 +133,32 @@ _SPOKEN_MARKERS: dict[str, tuple[str, ...]] = {
     "ml": ("എവിടെ", "എന്ത്", "ആണ്", "ആര്", "എങ്ങനെ"),
     "ur": ("کہاں", "ہے", "کیا", "کون", "کیسے"),
 }
+
+# Roman forms that many languages share after folding. Alone they never decide
+# a cross-script recovery — Hindi `कहाँ`/`क्या` otherwise look like Urdu/Punjabi
+# and drag extra scripts into every BM25 query.
+_AMBIGUOUS_SOUND = frozenset(
+    {
+        "hai",
+        "hain",
+        "ki",
+        "ke",
+        "ka",
+        "he",
+        "ho",
+        "ce",
+        "kan",
+        "kia",
+        "kaise",
+        "kise",
+        "kaun",
+        "kon",
+        "kitna",
+        "kitne",
+        "nahi",
+        "nhin",
+    }
+)
 
 
 def _romanized_marker_index() -> dict[str, frozenset[str]]:
@@ -173,10 +199,21 @@ def spoken_language(text: str) -> str | None:
     }
     if not hits:
         return None
-    best = max(hits.values())
-    winners = [code for code, count in hits.items() if count == best]
-    # `hai` belongs to Hindi, Punjabi and Urdu alike. An ambiguous vote is no
-    # evidence, so leave the decision to the script and to retrieval.
+
+    # Only recover a language written in the *wrong* script. Same-script
+    # disambiguation stays with marker words and the corpus classifier — using
+    # folded `hai`/`ki` here used to drag Punjabi into every Hindi query.
+    family = script_languages(text)
+    cross = {
+        code: count
+        for code, count in hits.items()
+        if code not in family
+        and words & (_SPOKEN_BY_SOUND[code] - _AMBIGUOUS_SOUND)
+    }
+    if not cross:
+        return None
+    best = max(cross.values())
+    winners = [code for code, count in cross.items() if count == best]
     return winners[0] if len(winners) == 1 else None
 
 
@@ -493,16 +530,12 @@ def retrieval_languages(
             return {forced_code, *family}
         return {forced_code}
 
-    # Recognised as one language but worded like another: search both, because
-    # only the passages of the language actually spoken can answer. When the
-    # words agree with the script, they already settle it and an audio guess
-    # must not narrow retrieval away from them.
+    # Cross-script recovery only: Gujarati words written in Devanagari must
+    # search Gujarati passages. Same-script marker hits must not block a
+    # compatible Scribe hint from narrowing the family.
     sounds_like = spoken_language(text)
-    if sounds_like:
-        if family and sounds_like not in family:
-            return {sounds_like, *family}
-        if family:
-            return family
+    if sounds_like and family and sounds_like not in family:
+        return {sounds_like, *family}
 
     hint_code = normalize_code(hint)
     if hint_code:
