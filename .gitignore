@@ -1,4 +1,5 @@
 .env
+SPEAKING_SCRIPT.md
 .cache/
 .cursor/*
 !.cursor/rules/

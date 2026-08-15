@@ -114,9 +114,9 @@ bordered by Maharashtra and Karnataka, with the Arabian Sea to the west.
 ## Extra grounded questions
 
 Do **not** ask “What is the capital of India?” or “What is MS MARCO used
-for?” on the live demo. Those facts are in the local hybrid index, not in
-the 300-chunk live sample, and the live app currently maps the capital
-question onto the Goa passage.
+for?” as demo successes on the live site. Those facts are in the local hybrid
+index, not the live sparse sample. Capital-of-India should **refuse** on the
+updated live build (partial overlap with the Goa passage is blocked).
 
 The live corpus also contains official multilingual IndicMSMARCO sample
 rows, but use the verified Goa questions above for a reliable recorded demo.
