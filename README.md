@@ -12,6 +12,7 @@ short_description: Fast grounded voice RAG over MSMARCO-XI
 # Voice RAG Goa
 
 [![Live demo](https://img.shields.io/badge/demo-voice--hhgoa.onrender.com-3dff8a?style=for-the-badge)](https://voice-hhgoa.onrender.com)
+[![YouTube](https://img.shields.io/badge/YouTube-watch_the_demo-ff0000?style=for-the-badge)](https://youtu.be/bUnrlCPLv7U)
 [![RAG P50](https://img.shields.io/badge/RAG_P50-93_ms-0e241b?style=for-the-badge)](docs/14-measured-latency.md)
 [![P100](https://img.shields.io/badge/RAG_P100-176_ms_%3C_200-3dff8a?style=for-the-badge)](docs/14-measured-latency.md)
 [![Dataset](https://img.shields.io/badge/MSMARCO--XI-streamed_not_55.6GB-ffb020?style=for-the-badge)](https://huggingface.co/datasets/ai4bharat/MSMARCO-XI)
@@ -23,9 +24,16 @@ Speak a question. Get an answer **only from indexed passages** — with sources,
 | | |
 |---|---|
 | Live | [voice-hhgoa.onrender.com](https://voice-hhgoa.onrender.com) · first hit after idle ~30 s |
+| **Demo video** | [youtu.be/bUnrlCPLv7U](https://youtu.be/bUnrlCPLv7U) |
 | Repo | [kalp-cg/voice-HHGoa](https://github.com/kalp-cg/voice-HHGoa) |
 | Hardware | RTX 3050 **6 GB** VRAM · **16 GB** RAM |
 | Tag | `#RAGInGoa` · deadline 22 Aug 2026 |
+
+## Watch the demo
+
+[![Voice RAG Goa — live demo on YouTube](docs/assets/youtube-thumbnail-demo.png)](https://youtu.be/bUnrlCPLv7U)
+
+Click the poster → [https://youtu.be/bUnrlCPLv7U](https://youtu.be/bUnrlCPLv7U)
 
 Hover the charts. They are real numbers from this repo, not mockups.
 
